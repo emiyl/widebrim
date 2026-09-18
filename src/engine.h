@@ -32,6 +32,7 @@ typedef struct widebrim_game_state {
     widebrim_mode_kind current_mode;
     uint32_t frame_counter;
     uint32_t last_tick_ms;
+    float mode_elapsed_sec;
 } widebrim_game_state;
 
 typedef struct widebrim_mode {

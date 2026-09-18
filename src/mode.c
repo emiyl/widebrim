@@ -9,8 +9,11 @@ static void widebrim_mode_boot_init(widebrim_mode *mode, widebrim_game_state *st
 
 static void widebrim_mode_boot_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
-    (void)dt;
-    state->current_mode = WIDEBRIM_MODE_TITLE;
+    state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 0.5f) {
+        state->mode_elapsed_sec = 0.0f;
+        state->current_mode = WIDEBRIM_MODE_TITLE;
+    }
 }
 
 static void widebrim_mode_boot_draw(widebrim_mode *mode,
@@ -33,8 +36,11 @@ static void widebrim_mode_title_init(widebrim_mode *mode, widebrim_game_state *s
 
 static void widebrim_mode_title_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
-    (void)dt;
-    state->current_mode = WIDEBRIM_MODE_ROOM;
+    state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 0.8f) {
+        state->mode_elapsed_sec = 0.0f;
+        state->current_mode = WIDEBRIM_MODE_ROOM;
+    }
 }
 
 static void widebrim_mode_title_draw(widebrim_mode *mode,
@@ -56,8 +62,11 @@ static void widebrim_mode_room_init(widebrim_mode *mode, widebrim_game_state *st
 
 static void widebrim_mode_room_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
-    (void)dt;
-    state->current_mode = WIDEBRIM_MODE_EVENT;
+    state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 1.2f) {
+        state->mode_elapsed_sec = 0.0f;
+        state->current_mode = WIDEBRIM_MODE_EVENT;
+    }
 }
 
 static void widebrim_mode_room_draw(widebrim_mode *mode,
@@ -79,8 +88,11 @@ static void widebrim_mode_event_init(widebrim_mode *mode, widebrim_game_state *s
 
 static void widebrim_mode_event_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
-    (void)dt;
-    state->current_mode = WIDEBRIM_MODE_TITLE;
+    state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 1.0f) {
+        state->mode_elapsed_sec = 0.0f;
+        state->current_mode = WIDEBRIM_MODE_TITLE;
+    }
 }
 
 static void widebrim_mode_event_draw(widebrim_mode *mode,
@@ -140,9 +152,6 @@ void widebrim_mode_manager_init(widebrim_mode_manager *manager) {
     memset(manager, 0, sizeof(*manager));
     widebrim_mode_set_kind(&manager->current, WIDEBRIM_MODE_BOOT);
     manager->has_current = true;
-    if (manager->current.init != NULL) {
-        manager->current.init(&manager->current, NULL);
-    }
 }
 
 void widebrim_mode_manager_set(widebrim_mode_manager *manager,

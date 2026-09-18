@@ -55,9 +55,7 @@ void widebrim_runtime_run(widebrim_runtime *runtime) {
             }
         }
 
-        if (runtime->state.current_mode == WIDEBRIM_MODE_BOOT) {
-            widebrim_mode_manager_update(&runtime->modes, &runtime->state, dt);
-        }
+        widebrim_mode_manager_update(&runtime->modes, &runtime->state, dt);
 
         widebrim_renderer_begin_frame(&runtime->renderer);
         widebrim_mode_manager_draw(&runtime->modes, &runtime->state, &runtime->renderer);
