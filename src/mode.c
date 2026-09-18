@@ -73,7 +73,11 @@ static void widebrim_mode_room_draw(widebrim_mode *mode,
                                    widebrim_game_state *state,
                                    widebrim_renderer *renderer) {
     (void)mode;
-    widebrim_renderer_draw_debug_screen(renderer, WIDEBRIM_MODE_ROOM, state->frame_counter);
+    if (!state->room_loaded) {
+        widebrim_room_init_default(&state->current_room, 1, "debug_room");
+        state->room_loaded = true;
+    }
+    widebrim_renderer_draw_room(renderer, &state->current_room, state->frame_counter);
 }
 
 static void widebrim_mode_room_shutdown(widebrim_mode *mode, widebrim_game_state *state) {

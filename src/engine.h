@@ -27,12 +27,27 @@ typedef struct widebrim_renderer {
     bool initialized;
 } widebrim_renderer;
 
+typedef struct widebrim_room {
+    uint32_t id;
+    char name[32];
+    Uint8 bg_r;
+    Uint8 bg_g;
+    Uint8 bg_b;
+    Uint8 accent_r;
+    Uint8 accent_g;
+    Uint8 accent_b;
+    int hotspot_x;
+    int hotspot_y;
+} widebrim_room;
+
 typedef struct widebrim_game_state {
     widebrim_madhatter madhatter;
     widebrim_mode_kind current_mode;
     uint32_t frame_counter;
     uint32_t last_tick_ms;
     float mode_elapsed_sec;
+    widebrim_room current_room;
+    bool room_loaded;
 } widebrim_game_state;
 
 typedef struct widebrim_mode {
@@ -75,7 +90,11 @@ void widebrim_renderer_end_frame(widebrim_renderer *renderer);
 void widebrim_renderer_draw_debug_screen(widebrim_renderer *renderer,
                                         widebrim_mode_kind mode,
                                         uint32_t frame_counter);
+void widebrim_renderer_draw_room(widebrim_renderer *renderer,
+                                const widebrim_room *room,
+                                uint32_t frame_counter);
 
+void widebrim_room_init_default(widebrim_room *room, uint32_t id, const char *name);
 void widebrim_game_state_init(widebrim_game_state *state);
 void widebrim_game_state_destroy(widebrim_game_state *state);
 

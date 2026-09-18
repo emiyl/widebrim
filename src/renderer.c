@@ -114,13 +114,51 @@ void widebrim_renderer_draw_debug_screen(widebrim_renderer *renderer,
     char label[64];
     snprintf(label, sizeof(label), "mode:%u frame:%u", (unsigned)mode, (unsigned)frame_counter);
 
-    SDL_Surface *surface = SDL_LoadBMP("/System/Library/Colors/Blue.tiff");
-    if (surface != NULL) {
-        SDL_DestroySurface(surface);
-    }
-
     SDL_SetRenderDrawColor(renderer->renderer, 235, 220, 160, 255);
     SDL_RenderDebugText(renderer->renderer, 8, 10, label);
     SDL_RenderDebugText(renderer->renderer, 8, screen_h + 44, "main screen");
     SDL_RenderDebugText(renderer->renderer, 8, screen_h + 120, "sub screen");
+}
+
+void widebrim_renderer_draw_room(widebrim_renderer *renderer,
+                                const widebrim_room *room,
+                                uint32_t frame_counter) {
+    if (renderer == NULL || !renderer->initialized || renderer->renderer == NULL || room == NULL) {
+        return;
+    }
+
+    const int room_w = WIDEBRIM_SCREEN_WIDTH;
+    const int room_h = WIDEBRIM_SCREEN_HEIGHT;
+
+    widebrim_draw_screen_region(renderer->renderer,
+                                0,
+                                0,
+                                room_w,
+                                room_h,
+                                room->bg_r,
+                                room->bg_g,
+                                room->bg_b,
+                                255);
+
+    SDL_SetRenderDrawColor(renderer->renderer, room->accent_r, room->accent_g, room->accent_b, 255);
+    SDL_FRect accent_panel = { 18.0f, 18.0f, 220.0f, 132.0f };
+    SDL_RenderFillRect(renderer->renderer, &accent_panel);
+
+    SDL_SetRenderDrawColor(renderer->renderer, 255, 255, 255, 255);
+    SDL_FRect hotspot = { (float)room->hotspot_x - 12.0f,
+                          (float)room->hotspot_y - 12.0f,
+                          24.0f,
+                          24.0f };
+    SDL_RenderFillRect(renderer->renderer, &hotspot);
+
+    SDL_SetRenderDrawColor(renderer->renderer, 15, 15, 15, 255);
+    SDL_FRect floor = { 0.0f, (float)room_h, (float)room_w, (float)room_h };
+    SDL_RenderFillRect(renderer->renderer, &floor);
+
+    SDL_SetRenderDrawColor(renderer->renderer, 235, 220, 160, 255);
+    char label[80];
+    snprintf(label, sizeof(label), "room:%s frame:%u", room->name, (unsigned)frame_counter);
+    SDL_RenderDebugText(renderer->renderer, 12, 10, label);
+    SDL_RenderDebugText(renderer->renderer, 12, room_h + 22, "scene");
+    SDL_RenderDebugText(renderer->renderer, 12, room_h + 56, "hotspot");
 }
