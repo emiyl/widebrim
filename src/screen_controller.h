@@ -4,8 +4,6 @@
 #include "bg_layer.h"
 #include "fader_layer.h"
 
-/* Thin wrapper combining BgLayer + FaderLayer, matching widebrim's
- * ScreenController facade used by game-mode handlers. */
 typedef struct {
     bg_layer *bg;
     fader_layer *fader;

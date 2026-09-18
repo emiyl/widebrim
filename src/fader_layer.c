@@ -1,6 +1,6 @@
 #include "fader_layer.h"
 
-#include "bg_layer.h" /* for WIDEBRIM_SCREEN_WIDTH/HEIGHT */
+#include "bg_layer.h"
 
 static void fader_timeline_start(fader_timeline *tl, float target, float duration_ms, bool flash_white,
                                   fader_callback cb, void *user) {
@@ -71,7 +71,6 @@ void fader_layer_fade_in_sub(fader_layer *fader, float duration_ms, fader_callba
 }
 
 void fader_layer_fade_out(fader_layer *fader, float duration_ms, fader_callback cb, void *user) {
-    /* Only the main-screen callback fires, matching FaderLayer.fadeOut driving a single completion event. */
     fader_layer_fade_out_sub(fader, duration_ms, NULL, NULL);
     fader_layer_fade_out_main(fader, duration_ms, cb, user);
 }
@@ -150,6 +149,6 @@ screen_layer fader_layer_as_screen_layer(fader_layer *fader) {
     layer.handle_key = NULL;
     layer.handle_touch = fader_layer_handle_touch_impl;
     layer.on_quit = NULL;
-    layer.destroy = NULL; /* fader_layer is owned by mode_spawner, not heap-allocated here */
+    layer.destroy = NULL;
     return layer;
 }

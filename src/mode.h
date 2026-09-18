@@ -5,7 +5,6 @@
 
 #include "screen.h"
 
-/* Matches widebrim's GAMEMODES enum values exactly (widebrim/widebrim/engine/state/enum_mode.py). */
 typedef enum {
     GAME_MODE_RESET = 0,
     GAME_MODE_ROOM = 1,
@@ -52,8 +51,6 @@ typedef enum {
     GAME_MODE_INVALID = 255
 } game_mode;
 
-/* A game-mode handler: a screen_layer plus a "has this mode finished" query,
- * used only by the mode spawner (not by the generic screen_collection). */
 typedef struct {
     screen_layer layer;
     bool (*is_done)(void *impl);

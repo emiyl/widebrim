@@ -73,8 +73,6 @@ static void mode_spawner_on_fade_out_complete(void *user) {
     mode_spawner_ready_switch(ms, ms->pending_target_mode);
 }
 
-/* Called every frame while no (or a finished) mode is active, so this must
- * not restart the fade-out on every call once one is already in flight. */
 static void mode_spawner_ready_switch(mode_spawner *ms, game_mode target) {
     if (fader_layer_is_view_obscured(&ms->fader)) {
         ms->switch_pending = false;

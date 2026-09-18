@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "bg_layer.h" /* WIDEBRIM_SCREEN_WIDTH/HEIGHT */
+#include "bg_layer.h"
 
 #define WIDEBRIM_TARGET_FRAMERATE 60.0
 #define WIDEBRIM_WINDOW_SCALE 2
@@ -42,8 +42,6 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
     mode_spawner_init(&rt->spawner, &rt->state, rt->renderer);
     game_state_set_mode(&rt->state, GAME_MODE_RESET);
 
-    /* Reserved for fade/transition logic that wants to bypass the frame
-     * clock for one frame (widebrim's ENGINE_SKIP_CLOCK); unused for now. */
     rt->engine_skip_clock_event_type = SDL_RegisterEvents(1);
 
     rt->running = true;

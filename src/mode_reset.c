@@ -2,8 +2,6 @@
 
 #include <stdlib.h>
 
-/* C port of ResetHelper, minus the logo GdScript playback (scripting is
- * deferred): reset transient state, fade to black, then jump to Title. */
 typedef struct {
     game_state *state;
     bool done;

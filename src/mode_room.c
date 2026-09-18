@@ -8,7 +8,7 @@
 #include <mh_datafiles.h>
 #include <mh_place.h>
 
-#include "bg_layer.h" /* WIDEBRIM_SCREEN_HEIGHT */
+#include "bg_layer.h"
 #include "bg_loader.h"
 #include "texture_util.h"
 
@@ -16,9 +16,9 @@
 #define MODE_ROOM_TITLE_CENTER_X 170
 #define MODE_ROOM_TITLE_Y 7
 
-/* Simplified RoomPlayer: shows the room's top/bottom backgrounds and lets the
- * player click exits to move between rooms. NPCs, party members, tea events,
- * photo pieces and tobj popups are all deferred (they need event scripting). */
+// simplified roomplayer, shows room's top/bottom background and lets the player
+// click through rooms. NPCs, party members, tea events, photo pieces and 
+// tobj popups are all deferred as they need event scripting
 typedef struct {
     game_state *state;
     screen_controller *controller;

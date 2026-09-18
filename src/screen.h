@@ -6,9 +6,6 @@
 
 #include <SDL3/SDL.h>
 
-/* C equivalent of widebrim's ScreenLayer: a vtable operating on an opaque
- * impl pointer. Any function pointer may be NULL (treated as a no-op /
- * "event not absorbed" / "nothing to free"). */
 typedef struct {
     void *impl;
     void (*update)(void *impl, float dt_ms);

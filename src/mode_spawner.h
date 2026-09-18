@@ -12,12 +12,8 @@
 #include "screen.h"
 #include "screen_controller.h"
 
-/* C port of ScreenCollectionGameModeSpawner: owns the Bg -> [active mode] ->
- * Fader layer stack and the fade-out/unload/load/fade-in mode-switch state
- * machine. Only Reset/Title/Room are wired up; any other mode falls back to
- * an "invalid mode" no-op instead of crashing. */
 typedef struct {
-    screen_collection layers; /* [0]=bg, [1]=active mode (optional), [last]=fader */
+    screen_collection layers;
     bg_layer bg;
     fader_layer fader;
     screen_controller controller;
@@ -27,7 +23,7 @@ typedef struct {
     mode_handler active_mode;
     game_mode current_active_mode;
     game_mode pending_target_mode;
-    bool switch_pending; /* a fade-out toward pending_target_mode is already in flight */
+    bool switch_pending;
 
     bool should_quit;
 } mode_spawner;

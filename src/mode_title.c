@@ -4,8 +4,8 @@
 
 #include "bg_loader.h"
 
-/* Simplified TitlePlayer: shows the title background and advances straight
- * to Room on any input (New Game/Continue menu logic is deferred). */
+// simplified title player: shows the title background and advances straight
+// to Room on any input (new game / continue menu logic is deferred)
 typedef struct {
     game_state *state;
     bool done;
@@ -23,8 +23,7 @@ static bool mode_title_advance(mode_title_impl *impl) {
     if (impl->done) {
         return false;
     }
-    /* place 10 is used as a known-good starting room for this milestone;
-     * there is no save file / progression system yet to derive the real one. */
+    
     game_state_set_place_num(impl->state, 10);
     game_state_set_mode(impl->state, GAME_MODE_ROOM);
     impl->done = true;

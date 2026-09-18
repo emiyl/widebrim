@@ -2,7 +2,6 @@
 
 #include <SDL3/SDL.h>
 
-/* Matches AltClock.PLATFORM_CLOCK_PRECISION_SEC. */
 #define WIDEBRIM_CLOCK_PRECISION_SEC 0.0015
 
 static double widebrim_clock_elapsed_sec(uint64_t since, uint64_t freq) {
@@ -24,7 +23,7 @@ double widebrim_clock_tick(widebrim_clock *clock, double target_interval_sec) {
     }
 
     while (widebrim_clock_elapsed_sec(last, freq) < target_interval_sec) {
-        /* busy-wait remainder for precision, matching AltClock */
+        // busy wait
     }
 
     clock->prev_frame_counter = SDL_GetPerformanceCounter();

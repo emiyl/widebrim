@@ -65,7 +65,6 @@ static void bg_layer_update_impl(void *impl, float dt_ms) {
     }
 }
 
-/* Matches BgLayer.draw: sub screen at (0,0), main screen at (0, WIDEBRIM_SCREEN_HEIGHT). */
 static void bg_layer_draw_one(SDL_Renderer *renderer, SDL_Texture *tex, int y_offset, float shake_remaining_ms, uint8_t darkness) {
     SDL_FRect dst;
     int shake_x = 0, shake_y = 0;

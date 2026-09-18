@@ -9,9 +9,8 @@
 
 typedef void (*fader_callback)(void *user);
 
-/* One independent fade timeline (used for main and sub screens separately). */
 typedef struct {
-    float alpha;         /* current overlay alpha, 0 (clear) .. 255 (fully obscured) */
+    float alpha;
     float start;
     float target;
     float duration_ms;

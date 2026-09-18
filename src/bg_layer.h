@@ -10,8 +10,6 @@
 #define WIDEBRIM_SCREEN_WIDTH 256
 #define WIDEBRIM_SCREEN_HEIGHT 192
 
-/* C port of BgLayer: owns the main (top) and sub (bottom) background
- * textures, palette darkening overlay and screen-shake offsets. */
 typedef struct {
     SDL_Renderer *renderer;
     SDL_Texture *tex_main;
@@ -34,7 +32,6 @@ void bg_layer_modify_palette_sub(bg_layer *bg, uint8_t darkness);
 void bg_layer_shake_main(bg_layer *bg, float duration_ms);
 void bg_layer_shake_sub(bg_layer *bg, float duration_ms);
 
-/* Wraps this bg_layer as a screen_layer for insertion into a screen_collection. */
 screen_layer bg_layer_as_screen_layer(bg_layer *bg);
 
 #endif
