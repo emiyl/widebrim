@@ -324,6 +324,7 @@ static bool mode_room_load_current(mode_room_impl *impl) {
 static void mode_room_on_transition_fade_done(void *user) {
     mode_room_impl *impl = (mode_room_impl *)user;
     game_state_set_place_num(impl->state, impl->pending_place_num);
+    mode_room_set_move_mode(impl, false);
     mode_room_load_current(impl);
     screen_controller_fade_in(impl->controller, FADER_DEFAULT_DURATION_MS, NULL, NULL);
 }
@@ -383,6 +384,7 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
                 return true;
             }
             impl->pending_place_num = exit->spawn_data;
+            mode_room_set_move_mode(impl, false);
             screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
                                         mode_room_on_transition_fade_done, impl);
             return true;
@@ -406,6 +408,7 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
                 return true;
             }
             impl->pending_place_num = exit->spawn_data;
+            mode_room_set_move_mode(impl, false);
             screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
                                         mode_room_on_transition_fade_done, impl);
             return true;
