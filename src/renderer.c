@@ -111,8 +111,14 @@ void widebrim_renderer_draw_debug_screen(widebrim_renderer *renderer,
     SDL_FRect divider = { 0.0f, (float)screen_h, (float)screen_w, 2.0f };
     SDL_RenderFillRect(renderer->renderer, &divider);
 
-    char label[64];
-    snprintf(label, sizeof(label), "mode:%u frame:%u", (unsigned)mode, (unsigned)frame_counter);
+    char label[96];
+    const char *mode_name = widebrim_mode_kind_to_string(mode);
+
+    snprintf(label,
+             sizeof(label),
+             "mode:%s frame:%u",
+             mode_name != NULL ? mode_name : "UNKNOWN",
+             (unsigned)frame_counter);
 
     SDL_SetRenderDrawColor(renderer->renderer, 235, 220, 160, 255);
     SDL_RenderDebugText(renderer->renderer, 8, 10, label);
