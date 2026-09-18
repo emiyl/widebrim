@@ -195,7 +195,7 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
     if (impl->title_texture) {
         SDL_FRect rect;
         rect.x = (float)(MODE_ROOM_TITLE_CENTER_X - impl->title_width / 2);
-        rect.y = (float)(MODE_ROOM_TITLE_Y + WIDEBRIM_SCREEN_HEIGHT);
+        rect.y = (float)MODE_ROOM_TITLE_Y;
         rect.w = (float)impl->title_width;
         rect.h = (float)impl->title_height;
         SDL_RenderTexture(renderer, impl->title_texture, NULL, &rect);
