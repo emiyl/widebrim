@@ -15,7 +15,7 @@ static void widebrim_mode_boot_update(widebrim_mode *mode, widebrim_game_state *
 
     state->mode_elapsed_sec += dt;
     if (state->mode_elapsed_sec >= 0.5f) {
-        widebrim_game_state_set_mode(state, WIDEBRIM_MODE_TITLE);
+        widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_TITLE);
     }
 }
 
@@ -185,9 +185,10 @@ void widebrim_mode_manager_update(widebrim_mode_manager *manager,
         manager->current.update(&manager->current, state, dt);
     }
 
-    if (state->current_mode != manager->current.kind) {
+    if (state->next_mode != state->current_mode) {
         widebrim_mode next;
-        widebrim_mode_set_kind(&next, state->current_mode);
+        widebrim_mode_set_kind(&next, state->next_mode);
+        state->current_mode = state->next_mode;
         widebrim_mode_manager_set(manager, &next, state);
     }
 }

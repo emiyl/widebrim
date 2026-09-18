@@ -15,9 +15,35 @@
 
 typedef enum {
     WIDEBRIM_MODE_BOOT = 0,
-    WIDEBRIM_MODE_TITLE = 1,
-    WIDEBRIM_MODE_ROOM = 2,
-    WIDEBRIM_MODE_EVENT = 3
+    WIDEBRIM_MODE_RESET = 0,
+    WIDEBRIM_MODE_ROOM = 1,
+    WIDEBRIM_MODE_EVENT = 3,
+    WIDEBRIM_MODE_DRAMA_EVENT = 3,
+    WIDEBRIM_MODE_MOVIE = 6,
+    WIDEBRIM_MODE_START_PUZZLE = 7,
+    WIDEBRIM_MODE_END_PUZZLE = 8,
+    WIDEBRIM_MODE_STAY_PUZZLE = 9,
+    WIDEBRIM_MODE_PUZZLE = 10,
+    WIDEBRIM_MODE_TITLE = 12,
+    WIDEBRIM_MODE_NARRATION = 13,
+    WIDEBRIM_MODE_BAG = 17,
+    WIDEBRIM_MODE_NAME = 18,
+    WIDEBRIM_MODE_MEMO = 23,
+    WIDEBRIM_MODE_EVENT_TEA = 25,
+    WIDEBRIM_MODE_SECRET_MENU = 28,
+    WIDEBRIM_MODE_TOP_SECRET_MENU = 30,
+    WIDEBRIM_MODE_ART_MODE = 32,
+    WIDEBRIM_MODE_CHR_VIEW_MODE = 33,
+    WIDEBRIM_MODE_MOVIE_VIEW_MODE = 36,
+    WIDEBRIM_MODE_HAMSTER_NAME = 37,
+    WIDEBRIM_MODE_NINTENDO_WFC_SETUP = 38,
+    WIDEBRIM_MODE_WIFI_DOWNLOAD_PUZZLE = 39,
+    WIDEBRIM_MODE_PASSCODE = 40,
+    WIDEBRIM_MODE_CODE_INPUT_PANDORA = 41,
+    WIDEBRIM_MODE_CODE_INPUT_FUTURE = 42,
+    WIDEBRIM_MODE_DIARY = 43,
+    WIDEBRIM_MODE_NAZOBA = 44,
+    WIDEBRIM_MODE_INVALID = 255
 } widebrim_mode_kind;
 
 typedef struct widebrim_renderer {
@@ -43,6 +69,7 @@ typedef struct widebrim_room {
 typedef struct widebrim_game_state {
     widebrim_madhatter madhatter;
     widebrim_mode_kind current_mode;
+    widebrim_mode_kind next_mode;
     uint32_t frame_counter;
     uint32_t last_tick_ms;
     float mode_elapsed_sec;
@@ -105,6 +132,8 @@ void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
 void widebrim_game_state_set_room(widebrim_game_state *state, uint32_t room_id);
 void widebrim_game_state_set_mode(widebrim_game_state *state,
                                  widebrim_mode_kind next_mode);
+void widebrim_game_state_set_next_mode(widebrim_game_state *state,
+                                      widebrim_mode_kind next_mode);
 void widebrim_game_state_load_scene(widebrim_game_state *state, uint32_t room_id);
 void widebrim_game_state_init(widebrim_game_state *state);
 void widebrim_game_state_destroy(widebrim_game_state *state);
