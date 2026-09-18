@@ -57,7 +57,9 @@ static void widebrim_mode_title_shutdown(widebrim_mode *mode, widebrim_game_stat
 
 static void widebrim_mode_room_init(widebrim_mode *mode, widebrim_game_state *state) {
     (void)mode;
-    (void)state;
+    if (state != NULL) {
+        widebrim_game_state_load_scene(state, 1);
+    }
 }
 
 static void widebrim_mode_room_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
