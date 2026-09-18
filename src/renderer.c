@@ -21,11 +21,6 @@ void widebrim_renderer_init(widebrim_renderer *renderer, const char *title) {
         return;
     }
 
-    if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
-        fprintf(stderr, "SDL video init failed: %s\n", SDL_GetError());
-        return;
-    }
-
     renderer->window = SDL_CreateWindow(title, 640, 768, 0);
     if (renderer->window == NULL) {
         fprintf(stderr, "Window creation failed: %s\n", SDL_GetError());

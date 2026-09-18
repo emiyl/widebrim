@@ -183,6 +183,12 @@ void widebrim_mode_manager_update(widebrim_mode_manager *manager,
     if (manager->current.update != NULL) {
         manager->current.update(&manager->current, state, dt);
     }
+
+    if (state->current_mode != manager->current.kind) {
+        widebrim_mode next;
+        widebrim_mode_set_kind(&next, state->current_mode);
+        widebrim_mode_manager_set(manager, &next, state);
+    }
 }
 
 void widebrim_mode_manager_draw(widebrim_mode_manager *manager,
