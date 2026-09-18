@@ -217,6 +217,13 @@ void widebrim_mode_manager_update(widebrim_mode_manager *manager,
         manager->current.update(&manager->current, state, dt);
     }
 
+    if (manager->current.kind != state->current_mode) {
+        widebrim_mode next;
+        widebrim_mode_set_kind(&next, state->current_mode);
+        widebrim_mode_manager_set(manager, &next, state);
+        return;
+    }
+
     if (state->next_mode != state->current_mode) {
         widebrim_mode next;
         widebrim_mode_set_kind(&next, state->next_mode);
