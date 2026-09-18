@@ -2,6 +2,27 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+static int widebrim_madhatter_has_magic(const uint8_t *data,
+                                        size_t len,
+                                        const char *magic,
+                                        size_t magic_len) {
+    size_t i;
+    const size_t max_scan = len < 64u ? len : 64u;
+
+    if (data == NULL || magic == NULL || magic_len == 0u) {
+        return 0;
+    }
+
+    for (i = 0u; i + magic_len <= max_scan; ++i) {
+        if (memcmp(data + i, magic, magic_len) == 0) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
 
 int widebrim_madhatter_init(widebrim_madhatter *ctx) {
     if (ctx == NULL) {
@@ -129,4 +150,43 @@ int widebrim_madhatter_load_layton_pack2(widebrim_madhatter *ctx,
     }
 
     return mh_archive_load_layton_pack2(&ctx->archive, data, len);
+}
+
+int widebrim_madhatter_load_pack(widebrim_madhatter *ctx,
+                               const uint8_t *data,
+                               size_t len,
+                               int version) {
+    int pack2_magic = 0;
+    int legacy_magic = 0;
+
+    if (ctx == NULL || data == NULL || len == 0) {
+        return -1;
+    }
+
+    pack2_magic = widebrim_madhatter_has_magic(data, len, "LPC2", 4u) ||
+                  widebrim_madhatter_has_magic(data, len, "PCK2", 4u);
+    legacy_magic = widebrim_madhatter_has_magic(data, len, "LPCK", 4u);
+
+    if (pack2_magic) {
+        return widebrim_madhatter_load_layton_pack2(ctx, data, len);
+    }
+
+    if (legacy_magic || version == 0 || version == 1) {
+        int legacy_version = version;
+        if (legacy_version != 0 && legacy_version != 1) {
+            legacy_version = 1;
+        }
+        return widebrim_madhatter_load_layton_pack(ctx, data, len, legacy_version);
+    }
+
+    return -1;
+}
+
+const mh_archive_entry *widebrim_madhatter_get_file(widebrim_madhatter *ctx,
+                                                   const char *name) {
+    if (ctx == NULL || name == NULL) {
+        return NULL;
+    }
+
+    return mh_archive_get(&ctx->archive, name);
 }

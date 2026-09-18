@@ -14,48 +14,17 @@ static int widebrim_runtime_try_magic_pack_load(widebrim_runtime *runtime,
                                               const uint8_t *data,
                                               size_t len,
                                               int version) {
-    size_t i;
-    int pack2_seen = 0;
-    int legacy_seen = 0;
-    const size_t max_header_scan = len < 64u ? len : 64u;
-
     if (runtime == NULL || data == NULL || len == 0) {
         return -1;
     }
 
-    for (i = 0; i + 4u <= max_header_scan; ++i) {
-        if ((i == 0u || i == 12u || i == 14u || i == 16u || i == 20u) &&
-            (memcmp(data + i, "PCK2", 4u) == 0 || memcmp(data + i, "LPC2", 4u) == 0)) {
-            pack2_seen = 1;
-            break;
-        }
+    if (widebrim_madhatter_load_pack(&runtime->state.madhatter, data, len, version) == 0) {
+        return 0;
     }
 
-    if (pack2_seen) {
-        if (widebrim_madhatter_load_layton_pack2(&runtime->state.madhatter, data, len) == 0) {
-            return 0;
-        }
-        fprintf(stderr, "Detected a pack2-style header in the Datafiles payload, but the native Madhatter parser rejected it. Fallback to raw registration is still enabled for compatibility.\n");
-    }
-
-    for (i = 0; i + 4u <= max_header_scan; ++i) {
-        if (memcmp(data + i, "LPCK", 4u) == 0 && (i == 0u || i == 8u || i == 12u || i == 16u)) {
-            legacy_seen = 1;
-            break;
-        }
-    }
-
-    if (legacy_seen || version == 0 || version == 1) {
-        int legacy_version = version;
-        if (legacy_version != 0 && legacy_version != 1) {
-            legacy_version = 1;
-        }
-
-        if (widebrim_madhatter_load_layton_pack(&runtime->state.madhatter, data, len, legacy_version) == 0) {
-            return 0;
-        }
-    }
-
+    fprintf(stderr,
+            "Detected a candidate archive payload, but the Madhatter parser rejected it. "
+            "Fallback to raw registration remains enabled for compatibility.\n");
     return -1;
 }
 
