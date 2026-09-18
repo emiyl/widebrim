@@ -140,6 +140,40 @@ static void widebrim_mode_event_shutdown(widebrim_mode *mode, widebrim_game_stat
     (void)state;
 }
 
+static void widebrim_mode_movie_init(widebrim_mode *mode, widebrim_game_state *state) {
+    (void)mode;
+    (void)state;
+}
+
+static void widebrim_mode_movie_update(widebrim_mode *mode,
+                                      widebrim_game_state *state,
+                                      float dt) {
+    (void)mode;
+    if (state == NULL) {
+        return;
+    }
+
+    state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 1.5f) {
+        widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_ROOM);
+    }
+}
+
+static void widebrim_mode_movie_draw(widebrim_mode *mode,
+                                    widebrim_game_state *state,
+                                    widebrim_renderer *renderer) {
+    (void)mode;
+    if (state == NULL) {
+        return;
+    }
+    widebrim_renderer_draw_debug_screen(renderer, WIDEBRIM_MODE_MOVIE, state->frame_counter);
+}
+
+static void widebrim_mode_movie_shutdown(widebrim_mode *mode, widebrim_game_state *state) {
+    (void)mode;
+    (void)state;
+}
+
 static void widebrim_mode_set_kind(widebrim_mode *mode, widebrim_mode_kind kind) {
     if (mode == NULL) {
         return;
@@ -168,6 +202,17 @@ static void widebrim_mode_set_kind(widebrim_mode *mode, widebrim_mode_kind kind)
             mode->shutdown = widebrim_mode_room_shutdown;
             break;
         case WIDEBRIM_MODE_EVENT:
+            mode->init = widebrim_mode_event_init;
+            mode->update = widebrim_mode_event_update;
+            mode->draw = widebrim_mode_event_draw;
+            mode->shutdown = widebrim_mode_event_shutdown;
+            break;
+        case WIDEBRIM_MODE_MOVIE:
+            mode->init = widebrim_mode_movie_init;
+            mode->update = widebrim_mode_movie_update;
+            mode->draw = widebrim_mode_movie_draw;
+            mode->shutdown = widebrim_mode_movie_shutdown;
+            break;
         default:
             mode->init = widebrim_mode_event_init;
             mode->update = widebrim_mode_event_update;
