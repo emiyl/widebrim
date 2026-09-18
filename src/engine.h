@@ -95,6 +95,10 @@ void widebrim_renderer_draw_room(widebrim_renderer *renderer,
                                 uint32_t frame_counter);
 
 void widebrim_room_init_default(widebrim_room *room, uint32_t id, const char *name);
+void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
+                                           uint32_t room_id,
+                                           char *buffer,
+                                           size_t buffer_size);
 void widebrim_game_state_load_scene(widebrim_game_state *state, uint32_t room_id);
 void widebrim_game_state_init(widebrim_game_state *state);
 void widebrim_game_state_destroy(widebrim_game_state *state);

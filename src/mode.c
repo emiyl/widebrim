@@ -37,10 +37,6 @@ static void widebrim_mode_title_init(widebrim_mode *mode, widebrim_game_state *s
 static void widebrim_mode_title_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
     state->mode_elapsed_sec += dt;
-    if (state->mode_elapsed_sec >= 0.8f) {
-        state->mode_elapsed_sec = 0.0f;
-        state->current_mode = WIDEBRIM_MODE_ROOM;
-    }
 }
 
 static void widebrim_mode_title_draw(widebrim_mode *mode,
@@ -65,18 +61,17 @@ static void widebrim_mode_room_init(widebrim_mode *mode, widebrim_game_state *st
 static void widebrim_mode_room_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
     state->mode_elapsed_sec += dt;
-    if (state->mode_elapsed_sec >= 1.2f) {
-        state->mode_elapsed_sec = 0.0f;
-        state->current_mode = WIDEBRIM_MODE_EVENT;
-    }
 }
 
 static void widebrim_mode_room_draw(widebrim_mode *mode,
                                    widebrim_game_state *state,
                                    widebrim_renderer *renderer) {
+    char room_name[128];
+
     (void)mode;
     if (!state->room_loaded) {
-        widebrim_room_init_default(&state->current_room, 1, "debug_room");
+        widebrim_game_state_resolve_scene_name(state, 1, room_name, sizeof(room_name));
+        widebrim_room_init_default(&state->current_room, 1, room_name);
         state->room_loaded = true;
     }
     widebrim_renderer_draw_room(renderer, &state->current_room, state->frame_counter);
@@ -95,10 +90,6 @@ static void widebrim_mode_event_init(widebrim_mode *mode, widebrim_game_state *s
 static void widebrim_mode_event_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
     state->mode_elapsed_sec += dt;
-    if (state->mode_elapsed_sec >= 1.0f) {
-        state->mode_elapsed_sec = 0.0f;
-        state->current_mode = WIDEBRIM_MODE_TITLE;
-    }
 }
 
 static void widebrim_mode_event_draw(widebrim_mode *mode,

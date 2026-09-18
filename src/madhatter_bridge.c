@@ -114,3 +114,19 @@ int widebrim_madhatter_load_layton_pack(widebrim_madhatter *ctx,
 
     return mh_archive_load_layton_pack(&ctx->archive, data, len, version);
 }
+
+int widebrim_madhatter_load_layton_pack2(widebrim_madhatter *ctx,
+                                        const uint8_t *data,
+                                        size_t len) {
+    if (ctx == NULL || data == NULL || len == 0) {
+        return -1;
+    }
+
+    if (!ctx->ready) {
+        if (widebrim_madhatter_init(ctx) != 0) {
+            return -1;
+        }
+    }
+
+    return mh_archive_load_layton_pack2(&ctx->archive, data, len);
+}

@@ -24,5 +24,8 @@ int widebrim_madhatter_load_layton_pack(widebrim_madhatter *ctx,
                                        const uint8_t *data,
                                        size_t len,
                                        int version);
+int widebrim_madhatter_load_layton_pack2(widebrim_madhatter *ctx,
+                                        const uint8_t *data,
+                                        size_t len);
 
 #endif
