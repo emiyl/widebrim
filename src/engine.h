@@ -130,6 +130,8 @@ void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
                                            char *buffer,
                                            size_t buffer_size);
 void widebrim_game_state_set_room(widebrim_game_state *state, uint32_t room_id);
+void widebrim_game_state_set_event(widebrim_game_state *state, uint32_t event_id);
+void widebrim_game_state_set_movie(widebrim_game_state *state, uint32_t movie_id);
 void widebrim_game_state_set_mode(widebrim_game_state *state,
                                  widebrim_mode_kind next_mode);
 void widebrim_game_state_set_next_mode(widebrim_game_state *state,

@@ -39,7 +39,14 @@ static void widebrim_mode_title_init(widebrim_mode *mode, widebrim_game_state *s
 
 static void widebrim_mode_title_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
+    if (state == NULL) {
+        return;
+    }
+
     state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 1.0f) {
+        widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_ROOM);
+    }
 }
 
 static void widebrim_mode_title_draw(widebrim_mode *mode,
@@ -64,7 +71,15 @@ static void widebrim_mode_room_init(widebrim_mode *mode, widebrim_game_state *st
 
 static void widebrim_mode_room_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
+    if (state == NULL) {
+        return;
+    }
+
     state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 2.5f) {
+        widebrim_game_state_set_event(state, 10080u);
+        widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_EVENT);
+    }
 }
 
 static void widebrim_mode_room_draw(widebrim_mode *mode,
@@ -73,9 +88,16 @@ static void widebrim_mode_room_draw(widebrim_mode *mode,
     char room_name[128];
 
     (void)mode;
+    if (state == NULL) {
+        return;
+    }
+
     if (!state->room_loaded) {
-        widebrim_game_state_resolve_scene_name(state, 1, room_name, sizeof(room_name));
-        widebrim_room_init_default(&state->current_room, 1, room_name);
+        widebrim_game_state_resolve_scene_name(state,
+                                              state->current_room_id,
+                                              room_name,
+                                              sizeof(room_name));
+        widebrim_room_init_default(&state->current_room, state->current_room_id, room_name);
         state->room_loaded = true;
     }
     widebrim_renderer_draw_room(renderer, &state->current_room, state->frame_counter);
@@ -93,7 +115,17 @@ static void widebrim_mode_event_init(widebrim_mode *mode, widebrim_game_state *s
 
 static void widebrim_mode_event_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
+    if (state == NULL) {
+        return;
+    }
+
     state->mode_elapsed_sec += dt;
+    if (state->mode_elapsed_sec >= 2.0f) {
+        if (state->current_event_id != 0u) {
+            widebrim_game_state_set_movie(state, state->current_event_id);
+        }
+        widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_ROOM);
+    }
 }
 
 static void widebrim_mode_event_draw(widebrim_mode *mode,

@@ -269,6 +269,25 @@ void widebrim_game_state_set_room(widebrim_game_state *state, uint32_t room_id) 
     state->current_room.id = room_id;
 }
 
+void widebrim_game_state_set_event(widebrim_game_state *state, uint32_t event_id) {
+    if (state == NULL) {
+        return;
+    }
+
+    state->current_event_id = event_id;
+    if (event_id == 0u) {
+        state->current_event_id = 1u;
+    }
+}
+
+void widebrim_game_state_set_movie(widebrim_game_state *state, uint32_t movie_id) {
+    if (state == NULL) {
+        return;
+    }
+
+    state->current_movie_id = movie_id;
+}
+
 void widebrim_game_state_set_mode(widebrim_game_state *state,
                                  widebrim_mode_kind next_mode) {
     if (state == NULL) {
