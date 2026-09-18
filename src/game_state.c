@@ -1,412 +1,50 @@
-#include "engine.h"
+#include "game_state.h"
 
-#include <stdio.h>
+#include <string.h>
 
-static void widebrim_archive_normalize_name(char *out,
-                                           size_t out_size,
-                                           const char *in) {
-    size_t pos = 0u;
-
-    if (out == NULL || out_size == 0u) {
-        return;
+int game_state_init(game_state *gs, const char *datafiles_root, const char *language) {
+    memset(gs, 0, sizeof(*gs));
+    if (mh_datafiles_init(&gs->datafiles, datafiles_root, language) != 0) {
+        return -1;
     }
-
-    out[0] = '\0';
-    if (in == NULL) {
-        return;
-    }
-
-    while (*in != '\0' && pos + 1u < out_size) {
-        char ch = *in;
-
-        if (ch == '\\') {
-            ch = '/';
-        }
-
-        if (ch == '/' && pos > 0u && out[pos - 1u] == '/') {
-            ++in;
-            continue;
-        }
-
-        out[pos++] = ch;
-        ++in;
-    }
-
-    out[pos] = '\0';
-
-    while (pos > 0u && out[pos - 1u] == '/') {
-        out[pos - 1u] = '\0';
-        --pos;
-    }
-}
-
-static const char *widebrim_archive_leaf_name(const char *name) {
-    const char *leaf = NULL;
-
-    if (name == NULL) {
-        return NULL;
-    }
-
-    leaf = strrchr(name, '/');
-    if (leaf == NULL) {
-        return name;
-    }
-
-    return leaf + 1;
-}
-
-static int widebrim_room_name_matches_archive(const char *archive_name,
-                                              uint32_t room_id) {
-    char normalized[256];
-    const char *leaf = NULL;
-    char expected_map[64];
-    char expected_main[64];
-    char expected_room[64];
-
-    if (archive_name == NULL) {
-        return 0;
-    }
-
-    widebrim_archive_normalize_name(normalized, sizeof(normalized), archive_name);
-    leaf = widebrim_archive_leaf_name(normalized);
-    if (leaf == NULL) {
-        return 0;
-    }
-
-    snprintf(expected_map, sizeof(expected_map), "map%u.arc", room_id);
-    snprintf(expected_main, sizeof(expected_main), "main%u.arc", room_id);
-    snprintf(expected_room, sizeof(expected_room), "room%u.arc", room_id);
-
-    if (strcmp(leaf, expected_map) == 0 || strcmp(normalized, expected_map) == 0 ||
-        strstr(normalized, "/bg/map/" ) != NULL && strstr(normalized, expected_map) != NULL) {
-        return 1;
-    }
-
-    if (strcmp(leaf, expected_main) == 0 || strcmp(normalized, expected_main) == 0 ||
-        strstr(normalized, "/bg/map/") != NULL && strstr(normalized, expected_main) != NULL) {
-        return 1;
-    }
-
-    if (strcmp(leaf, expected_room) == 0 || strcmp(normalized, expected_room) == 0) {
-        return 1;
-    }
-
+    gs->current_mode = GAME_MODE_INVALID;
+    gs->next_mode = GAME_MODE_INVALID;
+    game_state_reset(gs);
     return 0;
 }
 
-static int widebrim_scene_name_score(const char *archive_name, uint32_t room_id) {
-    char normalized[256];
-    char expected_map[64];
-    char expected_main[64];
-    char expected_room[64];
-    const char *leaf = NULL;
-    int score = 0;
-
-    if (archive_name == NULL) {
-        return -1;
-    }
-
-    widebrim_archive_normalize_name(normalized, sizeof(normalized), archive_name);
-    leaf = widebrim_archive_leaf_name(normalized);
-    if (leaf == NULL) {
-        return -1;
-    }
-
-    snprintf(expected_map, sizeof(expected_map), "map%u.arc", room_id);
-    snprintf(expected_main, sizeof(expected_main), "main%u.arc", room_id);
-    snprintf(expected_room, sizeof(expected_room), "room%u.arc", room_id);
-
-    if (strcmp(normalized, "data_lt2/bg/map/map1.arc") == 0 && room_id == 1u) {
-        return 200;
-    }
-    if (strcmp(normalized, "data_lt2/bg/map/map0.arc") == 0 && room_id == 0u) {
-        return 200;
-    }
-    if (strcmp(normalized, "data_lt2/bg/map/main1.arc") == 0 && room_id == 1u) {
-        return 190;
-    }
-
-    if (strcmp(normalized, expected_map) == 0 || strcmp(leaf, expected_map) == 0) {
-        score += 100;
-    }
-    if (strcmp(normalized, expected_main) == 0 || strcmp(leaf, expected_main) == 0) {
-        score += 95;
-    }
-    if (strcmp(normalized, expected_room) == 0 || strcmp(leaf, expected_room) == 0) {
-        score += 70;
-    }
-
-    if (strstr(normalized, "/bg/map/") != NULL && strstr(normalized, expected_map) != NULL) {
-        score += 80;
-    }
-    if (strstr(normalized, "/bg/map/") != NULL && strstr(normalized, expected_main) != NULL) {
-        score += 75;
-    }
-    if (strstr(normalized, "data_lt2/bg/map/") != NULL && strstr(normalized, expected_map) != NULL) {
-        score += 30;
-    }
-    if (strstr(normalized, "data_lt2/bg/map/") != NULL && strstr(normalized, expected_main) != NULL) {
-        score += 25;
-    }
-    if (strstr(normalized, expected_map) != NULL) {
-        score += 20;
-    }
-    if (strstr(normalized, expected_main) != NULL) {
-        score += 18;
-    }
-
-    return score;
+void game_state_destroy(game_state *gs) {
+    mh_datafiles_free(&gs->datafiles);
 }
 
-static int widebrim_archive_name_matches_room(const char *archive_name,
-                                            uint32_t room_id) {
-    char normalized[256];
-    char expected_map[64];
-    char expected_main[64];
-    char expected_room[64];
-
-    if (archive_name == NULL) {
-        return 0;
-    }
-
-    widebrim_archive_normalize_name(normalized, sizeof(normalized), archive_name);
-    snprintf(expected_map, sizeof(expected_map), "map%u.arc", room_id);
-    snprintf(expected_main, sizeof(expected_main), "main%u.arc", room_id);
-    snprintf(expected_room, sizeof(expected_room), "room%u.arc", room_id);
-
-    if (strstr(normalized, "/bg/map/") == NULL) {
-        return 0;
-    }
-
-    return (strstr(normalized, expected_map) != NULL ||
-            strstr(normalized, expected_main) != NULL ||
-            strstr(normalized, expected_room) != NULL);
+/* Clears session/progression state only - deliberately leaves current/next
+ * mode untouched, since the mode spawner sets those around this call. */
+void game_state_reset(game_state *gs) {
+    gs->place_num = 0;
+    gs->first_touch_enabled = true;
 }
 
-void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
-                                           uint32_t room_id,
-                                           char *buffer,
-                                           size_t buffer_size) {
-    size_t i;
-    const char *fallback = "data_lt2/bg/map/map0.arc";
-    static const char *preferred_names[] = {
-        "data_lt2/bg/map/map%u.arc",
-        "data_lt2/bg/map/main%u.arc",
-        "data_lt2/bg/map/room%u.arc",
-        "bg/map/map%u.arc",
-        "bg/map/main%u.arc",
-        "data_lt2/map/map%u.arc",
-        "map%u.arc",
-        "main%u.arc",
-        "room%u.arc",
-        "data_lt2/place/map%u.arc"
-    };
-    size_t preferred_count = sizeof(preferred_names) / sizeof(preferred_names[0]);
-    int best_score = -1;
-    const char *best_name = NULL;
-
-    if (state == NULL || buffer == NULL || buffer_size == 0u) {
-        return;
-    }
-
-    if (!state->madhatter.ready) {
-        snprintf(buffer, buffer_size, "%s", fallback);
-        return;
-    }
-
-    for (i = 0u; i < preferred_count; ++i) {
-        char candidate[256];
-        const char *name = NULL;
-
-        snprintf(candidate, sizeof(candidate), preferred_names[i], room_id);
-        name = mh_archive_get(&state->madhatter.archive, candidate) != NULL ? candidate : NULL;
-        if (name != NULL) {
-            snprintf(buffer, buffer_size, "%s", name);
-            return;
-        }
-    }
-
-    for (i = 0u; i < state->madhatter.archive.count; ++i) {
-        const mh_archive_entry *entry = &state->madhatter.archive.entries[i];
-        const char *name = entry->name;
-        int score = 0;
-
-        if (name == NULL || name[0] == '\0') {
-            continue;
-        }
-
-        score = widebrim_scene_name_score(name, room_id);
-        if (score > best_score) {
-            best_score = score;
-            best_name = name;
-        }
-
-        if (widebrim_room_name_matches_archive(name, room_id) ||
-            widebrim_archive_name_matches_room(name, room_id)) {
-            snprintf(buffer, buffer_size, "%s", name);
-            return;
-        }
-    }
-
-    if (best_name != NULL && best_score >= 20) {
-        snprintf(buffer, buffer_size, "%s", best_name);
-        return;
-    }
-
-    snprintf(buffer,
-             buffer_size,
-             "data_lt2/bg/map/map%u.arc",
-             room_id == 0u ? 1u : room_id);
+game_mode game_state_get_mode(const game_state *gs) {
+    return gs->current_mode;
 }
 
-void widebrim_room_init_default(widebrim_room *room, uint32_t id, const char *name) {
-    if (room == NULL) {
-        return;
-    }
-
-    memset(room, 0, sizeof(*room));
-    room->id = id;
-    if (name != NULL) {
-        snprintf(room->name, sizeof(room->name), "%s", name);
-    } else {
-        snprintf(room->name, sizeof(room->name), "room_%u", (unsigned)id);
-    }
-
-    room->bg_r = 22;
-    room->bg_g = 29;
-    room->bg_b = 36;
-    room->accent_r = 88;
-    room->accent_g = 161;
-    room->accent_b = 145;
-    room->hotspot_x = WIDEBRIM_SCREEN_WIDTH / 2;
-    room->hotspot_y = WIDEBRIM_SCREEN_HEIGHT / 2;
+void game_state_set_mode(game_state *gs, game_mode mode) {
+    gs->current_mode = mode;
+    gs->next_mode = GAME_MODE_INVALID;
 }
 
-void widebrim_game_state_set_room(widebrim_game_state *state, uint32_t room_id) {
-    if (state == NULL) {
-        return;
-    }
-
-    state->current_room_id = room_id == 0u ? 1u : room_id;
-    state->current_event_id = 0u;
-    state->current_movie_id = 0u;
-    state->room_loaded = false;
-    state->current_room.id = state->current_room_id;
+game_mode game_state_get_mode_next(const game_state *gs) {
+    return gs->next_mode;
 }
 
-void widebrim_game_state_set_event(widebrim_game_state *state, uint32_t event_id) {
-    if (state == NULL) {
-        return;
-    }
-
-    state->current_event_id = event_id == 0u ? 1u : event_id;
-    state->current_movie_id = 0u;
-    if (state->current_room_id == 0u) {
-        state->current_room_id = 1u;
-    }
+void game_state_set_mode_next(game_state *gs, game_mode mode) {
+    gs->next_mode = mode;
 }
 
-void widebrim_game_state_set_movie(widebrim_game_state *state, uint32_t movie_id) {
-    if (state == NULL) {
-        return;
-    }
-
-    state->current_movie_id = movie_id == 0u ? 1u : movie_id;
-    if (state->current_event_id == 0u) {
-        state->current_event_id = state->current_movie_id;
-    }
-    state->room_loaded = false;
+int game_state_get_place_num(const game_state *gs) {
+    return gs->place_num;
 }
 
-void widebrim_game_state_set_mode(widebrim_game_state *state,
-                                 widebrim_mode_kind next_mode) {
-    if (state == NULL) {
-        return;
-    }
-
-    if (next_mode == WIDEBRIM_MODE_INVALID) {
-        state->next_mode = WIDEBRIM_MODE_INVALID;
-        state->mode_elapsed_sec = 0.0f;
-        return;
-    }
-
-    state->current_mode = next_mode;
-    state->next_mode = WIDEBRIM_MODE_INVALID;
-    state->mode_elapsed_sec = 0.0f;
-
-    if (next_mode == WIDEBRIM_MODE_ROOM) {
-        state->room_loaded = false;
-        if (state->current_room_id == 0u) {
-            state->current_room_id = 1u;
-        }
-    }
-}
-
-void widebrim_game_state_set_next_mode(widebrim_game_state *state,
-                                      widebrim_mode_kind next_mode) {
-    if (state == NULL) {
-        return;
-    }
-
-    if (next_mode == WIDEBRIM_MODE_INVALID) {
-        state->next_mode = WIDEBRIM_MODE_INVALID;
-        state->mode_elapsed_sec = 0.0f;
-        return;
-    }
-
-    if (state->next_mode != next_mode || state->current_mode == next_mode) {
-        state->mode_elapsed_sec = 0.0f;
-    }
-
-    state->next_mode = next_mode;
-    if (next_mode == WIDEBRIM_MODE_ROOM) {
-        state->room_loaded = false;
-    }
-    if (state->current_mode == next_mode) {
-        state->mode_elapsed_sec = 0.0f;
-    }
-}
-
-void widebrim_game_state_load_scene(widebrim_game_state *state, uint32_t room_id) {
-    char scene_name[128];
-
-    if (state == NULL) {
-        return;
-    }
-
-    state->current_room_id = room_id;
-    widebrim_game_state_resolve_scene_name(state, room_id, scene_name, sizeof(scene_name));
-    widebrim_room_init_default(&state->current_room, room_id, scene_name);
-    state->current_room_id = room_id;
-    state->room_loaded = true;
-}
-
-void widebrim_game_state_init(widebrim_game_state *state) {
-    if (state == NULL) {
-        return;
-    }
-
-    memset(state, 0, sizeof(*state));
-    state->current_mode = WIDEBRIM_MODE_BOOT;
-    state->next_mode = WIDEBRIM_MODE_INVALID;
-    state->frame_counter = 0;
-    state->last_tick_ms = 0;
-    state->mode_elapsed_sec = 0.0f;
-    state->current_room_id = 1u;
-    state->current_event_id = 0u;
-    state->current_movie_id = 0u;
-    widebrim_madhatter_init(&state->madhatter);
-    widebrim_game_state_load_scene(state, 1);
-}
-
-void widebrim_game_state_destroy(widebrim_game_state *state) {
-    if (state == NULL) {
-        return;
-    }
-
-    widebrim_madhatter_free(&state->madhatter);
-    state->current_mode = WIDEBRIM_MODE_BOOT;
-    state->frame_counter = 0;
-    state->mode_elapsed_sec = 0.0f;
-    state->room_loaded = false;
+void game_state_set_place_num(game_state *gs, int place_num) {
+    gs->place_num = place_num;
 }

@@ -25,11 +25,17 @@ include_directories(
 
 add_executable(widebrim
     src/main.c
-    src/madhatter_bridge.c
-    src/engine.h
-    src/renderer.c
+    src/runtime.c
+    src/clock.c
+    src/screen.c
+    src/bg_layer.c
+    src/fader_layer.c
+    src/bg_loader.c
     src/game_state.c
-    src/mode.c
+    src/mode_spawner.c
+    src/mode_reset.c
+    src/mode_title.c
+    src/mode_room.c
 )
 
 target_include_directories(widebrim PRIVATE
