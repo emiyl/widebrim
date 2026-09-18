@@ -15,18 +15,25 @@
 #define MODE_ROOM_EXIT_IMAGE_COUNT 8
 #define MODE_ROOM_TITLE_CENTER_X 170
 #define MODE_ROOM_TITLE_Y 7
-#define MODE_ROOM_MOVE_TOGGLE_X 255
-#define MODE_ROOM_MOVE_TOGGLE_Y 8
-#define MODE_ROOM_MOVE_TOGGLE_W 50
-#define MODE_ROOM_MOVE_TOGGLE_H 18
-#define MODE_ROOM_MENU_TOGGLE_X 205
-#define MODE_ROOM_MENU_TOGGLE_Y 8
-#define MODE_ROOM_MENU_TOGGLE_W 42
-#define MODE_ROOM_MENU_TOGGLE_H 18
-#define MODE_ROOM_CAMERA_TOGGLE_X 150
-#define MODE_ROOM_CAMERA_TOGGLE_Y 8
-#define MODE_ROOM_CAMERA_TOGGLE_W 42
-#define MODE_ROOM_CAMERA_TOGGLE_H 18
+
+#define SCREEN_W 256
+#define SCREEN_H 192
+#define SPACING 2
+
+#define MODE_ROOM_MOVE_TOGGLE_FALLBACK_W 24
+#define MODE_ROOM_MOVE_TOGGLE_FALLBACK_H 30
+#define MODE_ROOM_MOVE_TOGGLE_X SCREEN_W - (MODE_ROOM_MOVE_TOGGLE_FALLBACK_W + SPACING * 2)
+#define MODE_ROOM_MOVE_TOGGLE_Y SCREEN_H - (MODE_ROOM_MOVE_TOGGLE_FALLBACK_H + SPACING * 2)
+
+#define MODE_ROOM_MENU_TOGGLE_FALLBACK_W 28
+#define MODE_ROOM_MENU_TOGGLE_FALLBACK_H 30
+#define MODE_ROOM_MENU_TOGGLE_X SCREEN_W - (MODE_ROOM_MENU_TOGGLE_FALLBACK_W + SPACING)
+#define MODE_ROOM_MENU_TOGGLE_Y SPACING
+
+#define MODE_ROOM_CAMERA_TOGGLE_FALLBACK_W 24
+#define MODE_ROOM_CAMERA_TOGGLE_FALLBACK_H 24
+#define MODE_ROOM_CAMERA_TOGGLE_X MODE_ROOM_MENU_TOGGLE_X
+#define MODE_ROOM_CAMERA_TOGGLE_Y MODE_ROOM_MENU_TOGGLE_Y + (MODE_ROOM_MENU_TOGGLE_FALLBACK_H + SPACING)
 
 // simplified roomplayer, shows room's top/bottom background and lets the player
 // click through rooms. NPCs, party members, tea events, photo pieces and 
@@ -105,6 +112,32 @@ static bool mode_room_button_rect_contains_point(int x, int y, int rect_x, int r
            y >= rect_y && y < rect_y + rect_h;
 }
 
+static void mode_room_get_button_size(SDL_Texture *texture, int fallback_w, int fallback_h,
+                                      int *out_w, int *out_h) {
+    float w = 0.0f;
+    float h = 0.0f;
+
+    if (texture && SDL_GetTextureSize(texture, &w, &h) == 0 && w > 0.0f && h > 0.0f) {
+        *out_w = (int)w;
+        *out_h = (int)h;
+    } else {
+        *out_w = fallback_w;
+        *out_h = fallback_h;
+    }
+}
+
+static void mode_room_set_button_draw_rect(SDL_Texture *texture, int x, int y, int fallback_w, int fallback_h,
+                                          SDL_FRect *dst) {
+    int w;
+    int h;
+
+    mode_room_get_button_size(texture, fallback_w, fallback_h, &w, &h);
+    dst->x = (float)x;
+    dst->y = (float)y;
+    dst->w = (float)w;
+    dst->h = (float)h;
+}
+
 static SDL_Texture *mode_room_load_button_texture(game_state *state, SDL_Renderer *renderer,
                                                  const char *path, const char *fallback_name) {
     mh_buffer data;
@@ -116,6 +149,7 @@ static SDL_Texture *mode_room_load_button_texture(game_state *state, SDL_Rendere
 
     mh_buffer_init(&data);
     if (mh_datafiles_get_data(&state->datafiles, path, &data) != 0) {
+        fprintf(stderr, "widebrim: room button asset '%s' not found\n", path);
         mh_buffer_free(&data);
         return NULL;
     }
@@ -137,30 +171,65 @@ static SDL_Texture *mode_room_load_button_texture(game_state *state, SDL_Rendere
             texture = texture_from_rgba(renderer, anim.frames[0].pixels, anim.frames[0].width, anim.frames[0].height);
         }
         mh_anim_free(&anim);
+    } else {
+        fprintf(stderr, "widebrim: room button asset '%s' failed to decode as ARC\n", path);
     }
     mh_buffer_free(&data);
     return texture;
 }
 
 static bool mode_room_toggle_rect_contains_point(mode_room_impl *impl, float x, float y) {
-    (void)impl;
-    return mode_room_button_rect_contains_point((int)x, (int)y,
-                                               MODE_ROOM_MOVE_TOGGLE_X, MODE_ROOM_MOVE_TOGGLE_Y,
-                                               MODE_ROOM_MOVE_TOGGLE_W, MODE_ROOM_MOVE_TOGGLE_H);
+    int w;
+    int h;
+    int rect_x;
+    int rect_y;
+    float room_y = y - (float)WIDEBRIM_SCREEN_HEIGHT;
+
+    mode_room_get_button_size(impl->move_button_texture, MODE_ROOM_MOVE_TOGGLE_FALLBACK_W,
+                              MODE_ROOM_MOVE_TOGGLE_FALLBACK_H, &w, &h);
+    rect_x = MODE_ROOM_MOVE_TOGGLE_X;
+    rect_y = MODE_ROOM_MOVE_TOGGLE_Y;
+    if (w != MODE_ROOM_MOVE_TOGGLE_FALLBACK_W || h != MODE_ROOM_MOVE_TOGGLE_FALLBACK_H) {
+        rect_x = SCREEN_W - (w + SPACING * 2);
+        rect_y = SCREEN_H - (h + SPACING * 2);
+    }
+    return mode_room_button_rect_contains_point((int)x, (int)room_y, rect_x, rect_y, w, h);
 }
 
 static bool mode_room_menu_rect_contains_point(mode_room_impl *impl, float x, float y) {
-    (void)impl;
-    return mode_room_button_rect_contains_point((int)x, (int)y,
-                                               MODE_ROOM_MENU_TOGGLE_X, MODE_ROOM_MENU_TOGGLE_Y,
-                                               MODE_ROOM_MENU_TOGGLE_W, MODE_ROOM_MENU_TOGGLE_H);
+    int w;
+    int h;
+    int rect_x;
+    int rect_y;
+    float room_y = y - (float)WIDEBRIM_SCREEN_HEIGHT;
+
+    mode_room_get_button_size(impl->menu_button_texture, MODE_ROOM_MENU_TOGGLE_FALLBACK_W,
+                              MODE_ROOM_MENU_TOGGLE_FALLBACK_H, &w, &h);
+    rect_x = MODE_ROOM_MENU_TOGGLE_X;
+    rect_y = MODE_ROOM_MENU_TOGGLE_Y;
+    if (w != MODE_ROOM_MENU_TOGGLE_FALLBACK_W || h != MODE_ROOM_MENU_TOGGLE_FALLBACK_H) {
+        rect_x = SCREEN_W - (w + SPACING);
+        rect_y = SPACING;
+    }
+    return mode_room_button_rect_contains_point((int)x, (int)room_y, rect_x, rect_y, w, h);
 }
 
 static bool mode_room_camera_rect_contains_point(mode_room_impl *impl, float x, float y) {
-    (void)impl;
-    return mode_room_button_rect_contains_point((int)x, (int)y,
-                                               MODE_ROOM_CAMERA_TOGGLE_X, MODE_ROOM_CAMERA_TOGGLE_Y,
-                                               MODE_ROOM_CAMERA_TOGGLE_W, MODE_ROOM_CAMERA_TOGGLE_H);
+    int w;
+    int h;
+    int rect_x;
+    int rect_y;
+    float room_y = y - (float)WIDEBRIM_SCREEN_HEIGHT;
+
+    mode_room_get_button_size(impl->camera_button_texture, MODE_ROOM_CAMERA_TOGGLE_FALLBACK_W,
+                              MODE_ROOM_CAMERA_TOGGLE_FALLBACK_H, &w, &h);
+    rect_x = MODE_ROOM_CAMERA_TOGGLE_X;
+    rect_y = MODE_ROOM_CAMERA_TOGGLE_Y;
+    if (w != MODE_ROOM_CAMERA_TOGGLE_FALLBACK_W || h != MODE_ROOM_CAMERA_TOGGLE_FALLBACK_H) {
+        rect_x = MODE_ROOM_MENU_TOGGLE_X;
+        rect_y = SPACING + (MODE_ROOM_MENU_TOGGLE_FALLBACK_H + SPACING);
+    }
+    return mode_room_button_rect_contains_point((int)x, (int)room_y, rect_x, rect_y, w, h);
 }
 
 static void mode_room_set_move_mode(mode_room_impl *impl, bool enabled) {
@@ -351,65 +420,92 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    SDL_FRect move_toggle_rect = { (float)MODE_ROOM_MOVE_TOGGLE_X,
-                                   (float)MODE_ROOM_MOVE_TOGGLE_Y + (float)WIDEBRIM_SCREEN_HEIGHT,
-                                   (float)MODE_ROOM_MOVE_TOGGLE_W, (float)MODE_ROOM_MOVE_TOGGLE_H };
-    SDL_FRect menu_toggle_rect = { (float)MODE_ROOM_MENU_TOGGLE_X,
-                                   (float)MODE_ROOM_MENU_TOGGLE_Y + (float)WIDEBRIM_SCREEN_HEIGHT,
-                                   (float)MODE_ROOM_MENU_TOGGLE_W, (float)MODE_ROOM_MENU_TOGGLE_H };
-    SDL_FRect camera_toggle_rect = { (float)MODE_ROOM_CAMERA_TOGGLE_X,
-                                     (float)MODE_ROOM_CAMERA_TOGGLE_Y + (float)WIDEBRIM_SCREEN_HEIGHT,
-                                     (float)MODE_ROOM_CAMERA_TOGGLE_W, (float)MODE_ROOM_CAMERA_TOGGLE_H };
+    SDL_FRect move_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
+    SDL_FRect menu_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
+    SDL_FRect camera_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+    {
+        int w;
+        int h;
+        mode_room_get_button_size(impl->move_button_texture, MODE_ROOM_MOVE_TOGGLE_FALLBACK_W,
+                                  MODE_ROOM_MOVE_TOGGLE_FALLBACK_H, &w, &h);
+        move_toggle_rect.x = (float)(SCREEN_W - (w + SPACING * 2));
+        move_toggle_rect.y = (float)(SCREEN_H - (h + SPACING * 2) + (int)WIDEBRIM_SCREEN_HEIGHT);
+        move_toggle_rect.w = (float)w;
+        move_toggle_rect.h = (float)h;
+    }
+    {
+        int w;
+        int h;
+        mode_room_get_button_size(impl->menu_button_texture, MODE_ROOM_MENU_TOGGLE_FALLBACK_W,
+                                  MODE_ROOM_MENU_TOGGLE_FALLBACK_H, &w, &h);
+        menu_toggle_rect.x = (float)(SCREEN_W - (w + SPACING));
+        menu_toggle_rect.y = (float)(SPACING + (int)WIDEBRIM_SCREEN_HEIGHT);
+        menu_toggle_rect.w = (float)w;
+        menu_toggle_rect.h = (float)h;
+    }
+    {
+        int w;
+        int h;
+        mode_room_get_button_size(impl->camera_button_texture, MODE_ROOM_CAMERA_TOGGLE_FALLBACK_W,
+                                  MODE_ROOM_CAMERA_TOGGLE_FALLBACK_H, &w, &h);
+        camera_toggle_rect.x = (float)MODE_ROOM_MENU_TOGGLE_X;
+        camera_toggle_rect.y = (float)(SPACING + MODE_ROOM_MENU_TOGGLE_FALLBACK_H + SPACING + (int)WIDEBRIM_SCREEN_HEIGHT);
+        camera_toggle_rect.w = (float)w;
+        camera_toggle_rect.h = (float)h;
+    }
 
     if (impl->move_button_texture) {
         SDL_RenderTexture(renderer, impl->move_button_texture, NULL, &move_toggle_rect);
     } else {
-        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 180);
+        SDL_SetRenderDrawColor(renderer, 42, 255, 180, 220);
         SDL_RenderFillRect(renderer, &move_toggle_rect);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderRect(renderer, &move_toggle_rect);
     }
     if (impl->menu_button_texture) {
         SDL_RenderTexture(renderer, impl->menu_button_texture, NULL, &menu_toggle_rect);
     } else {
-        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 180);
+        SDL_SetRenderDrawColor(renderer, 90, 160, 255, 220);
         SDL_RenderFillRect(renderer, &menu_toggle_rect);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderRect(renderer, &menu_toggle_rect);
     }
     if (impl->camera_button_texture) {
         SDL_RenderTexture(renderer, impl->camera_button_texture, NULL, &camera_toggle_rect);
     } else {
-        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 180);
+        SDL_SetRenderDrawColor(renderer, 255, 170, 60, 220);
         SDL_RenderFillRect(renderer, &camera_toggle_rect);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderRect(renderer, &camera_toggle_rect);
     }
 
-    for (i = 0; i < impl->place.exit_count; ++i) {
-        const mh_place_exit *exit = &impl->place.exits[i];
-        SDL_Texture *sprite = NULL;
-        if (exit->id_image < MODE_ROOM_EXIT_IMAGE_COUNT) {
-            if (impl->in_move_mode && (int)i == impl->highlighted_exit_index) {
-                sprite = impl->exit_sprites_highlighted[exit->id_image] ? impl->exit_sprites_highlighted[exit->id_image]
-                                                                      : impl->exit_sprites[exit->id_image];
-            } else {
-                sprite = impl->exit_sprites[exit->id_image];
+    if (impl->in_move_mode) {
+        for (i = 0; i < impl->place.exit_count; ++i) {
+            const mh_place_exit *exit = &impl->place.exits[i];
+            SDL_Texture *sprite = NULL;
+            if (exit->id_image < MODE_ROOM_EXIT_IMAGE_COUNT) {
+                if ((int)i == impl->highlighted_exit_index) {
+                    sprite = impl->exit_sprites_highlighted[exit->id_image] ? impl->exit_sprites_highlighted[exit->id_image]
+                                                                          : impl->exit_sprites[exit->id_image];
+                } else {
+                    sprite = impl->exit_sprites[exit->id_image];
+                }
             }
-        }
-        SDL_FRect rect;
-        rect.x = (float)exit->bounding.x;
-        rect.y = (float)exit->bounding.y + (float)WIDEBRIM_SCREEN_HEIGHT;
-        rect.w = (float)exit->bounding.width;
-        rect.h = (float)exit->bounding.height;
+            SDL_FRect rect;
+            rect.x = (float)exit->bounding.x;
+            rect.y = (float)exit->bounding.y + (float)WIDEBRIM_SCREEN_HEIGHT;
+            rect.w = (float)exit->bounding.width;
+            rect.h = (float)exit->bounding.height;
 
-        if (sprite) {
-            SDL_RenderTexture(renderer, sprite, NULL, &rect);
-        } else {
-            /* no decoded sprite for this id_image - fall back to an outline so the hotspot stays visible */
-            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-            SDL_SetRenderDrawColor(renderer, 255, 255, 0, 160);
-            SDL_RenderRect(renderer, &rect);
+            if (sprite) {
+                SDL_RenderTexture(renderer, sprite, NULL, &rect);
+            } else {
+                /* no decoded sprite for this id_image - fall back to an outline so the hotspot stays visible */
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                SDL_SetRenderDrawColor(renderer, 255, 255, 0, 160);
+                SDL_RenderRect(renderer, &rect);
+            }
         }
     }
 
