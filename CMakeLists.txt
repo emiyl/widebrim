@@ -23,21 +23,11 @@ include_directories(
     ${SDL3_INCLUDE_DIRS}
 )
 
-add_executable(widebrim
-    src/main.c
-    src/runtime.c
-    src/clock.c
-    src/screen.c
-    src/bg_layer.c
-    src/fader_layer.c
-    src/bg_loader.c
-    src/texture_util.c
-    src/game_state.c
-    src/mode_spawner.c
-    src/mode_reset.c
-    src/mode_title.c
-    src/mode_room.c
+file(GLOB_RECURSE WIDEBRIM_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
 )
+
+add_executable(widebrim ${WIDEBRIM_SOURCES})
 
 target_include_directories(widebrim PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

@@ -33,6 +33,7 @@ void game_state_destroy(game_state *gs) {
  * mode untouched, since the mode spawner sets those around this call. */
 void game_state_reset(game_state *gs) {
     gs->place_num = 0;
+    gs->event_id = -1;
     gs->first_touch_enabled = true;
 }
 
@@ -42,7 +43,6 @@ game_mode game_state_get_mode(const game_state *gs) {
 
 void game_state_set_mode(game_state *gs, game_mode mode) {
     gs->current_mode = mode;
-    gs->next_mode = GAME_MODE_INVALID;
 }
 
 game_mode game_state_get_mode_next(const game_state *gs) {
@@ -53,10 +53,24 @@ void game_state_set_mode_next(game_state *gs, game_mode mode) {
     gs->next_mode = mode;
 }
 
+game_mode game_state_consume_mode_next(game_state *gs) {
+    game_mode mode = gs->next_mode;
+    gs->next_mode = GAME_MODE_INVALID;
+    return mode;
+}
+
 int game_state_get_place_num(const game_state *gs) {
     return gs->place_num;
 }
 
 void game_state_set_place_num(game_state *gs, int place_num) {
     gs->place_num = place_num;
+}
+
+int game_state_get_event_id(const game_state *gs) {
+    return gs->event_id;
+}
+
+void game_state_set_event_id(game_state *gs, int event_id) {
+    gs->event_id = event_id;
 }

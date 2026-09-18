@@ -15,6 +15,7 @@ typedef struct {
     game_mode current_mode;
     game_mode next_mode;
     int place_num;
+    int event_id;
     bool first_touch_enabled;
     mh_font font_event;
     bool font_event_loaded;
@@ -30,8 +31,11 @@ game_mode game_state_get_mode(const game_state *gs);
 void game_state_set_mode(game_state *gs, game_mode mode);
 game_mode game_state_get_mode_next(const game_state *gs);
 void game_state_set_mode_next(game_state *gs, game_mode mode);
+game_mode game_state_consume_mode_next(game_state *gs);
 
 int game_state_get_place_num(const game_state *gs);
 void game_state_set_place_num(game_state *gs, int place_num);
+int game_state_get_event_id(const game_state *gs);
+void game_state_set_event_id(game_state *gs, int event_id);
 
 #endif

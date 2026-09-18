@@ -5,6 +5,7 @@
 #include "mode_reset.h"
 #include "mode_room.h"
 #include "mode_title.h"
+#include "mode_drama_event.h"
 
 static mode_handler mode_spawner_create_handler(game_mode mode, game_state *state, screen_controller *controller) {
     switch (mode) {
@@ -14,6 +15,8 @@ static mode_handler mode_spawner_create_handler(game_mode mode, game_state *stat
             return mode_title_create(state, controller);
         case GAME_MODE_ROOM:
             return mode_room_create(state, controller);
+        case GAME_MODE_DRAMA_EVENT:
+            return mode_drama_event_create(state, controller);
         default: {
             mode_handler invalid;
             invalid.layer.impl = NULL;

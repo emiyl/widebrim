@@ -156,8 +156,12 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
             if (mh_place_exit_can_spawn_event(exit)) {
                 fprintf(stderr,
                         "widebrim: exit %zu triggers a scripted event (mode_decoding=%u); "
-                        "scripting is not implemented yet, ignoring\n",
+                        "switching to DramaEvent\n",
                         i, exit->mode_decoding);
+                game_state_set_event_id(impl->state, exit->spawn_data);
+                game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
+                game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
+                impl->done = true;
                 return true;
             }
             impl->pending_place_num = exit->spawn_data;
