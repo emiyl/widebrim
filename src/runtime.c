@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "bg_layer.h"
+#include "texture_util.h"
 
 #define WIDEBRIM_TARGET_FRAMERATE 60.0
 #define WIDEBRIM_WINDOW_SCALE 2
@@ -12,6 +13,7 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
     rt->renderer = NULL;
     rt->running = false;
     rt->speed_modifier = false;
+    rt->alpha_blend_enabled = true;
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         fprintf(stderr, "widebrim: SDL_Init failed: %s\n", SDL_GetError());
@@ -29,8 +31,11 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
         return -1;
     }
     SDL_SetRenderLogicalPresentation(rt->renderer, WIDEBRIM_SCREEN_WIDTH, WIDEBRIM_SCREEN_HEIGHT * 2,
-                                      SDL_LOGICAL_PRESENTATION_LETTERBOX);
+                                      SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+    SDL_SetRenderScale(rt->renderer, 1.0f, 1.0f);
     SDL_SetDefaultTextureScaleMode(rt->renderer, SDL_SCALEMODE_NEAREST);
+    SDL_SetRenderDrawBlendMode(rt->renderer, SDL_BLENDMODE_BLEND);
+    texture_set_global_blend_mode(SDL_BLENDMODE_BLEND);
 
     if (game_state_init(&rt->state, datafiles_root, language) != 0) {
         fprintf(stderr, "widebrim: failed to initialize Datafiles access at '%s'\n", datafiles_root);
@@ -90,9 +95,10 @@ void widebrim_runtime_run(widebrim_runtime *rt) {
                        event.type == SDL_EVENT_MOUSE_MOTION) {
                 mode_spawner_handle_touch(&rt->spawner, &event);
             } else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_TAB) {
-                rt->speed_modifier = true;
-            } else if (event.type == SDL_EVENT_KEY_UP && event.key.key == SDLK_TAB) {
-                rt->speed_modifier = false;
+                rt->alpha_blend_enabled = !rt->alpha_blend_enabled;
+                SDL_SetRenderDrawBlendMode(rt->renderer,
+                                           rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
+                texture_set_global_blend_mode(rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
             } else if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
                 mode_spawner_handle_key(&rt->spawner, &event);
             } else if (event.type == rt->engine_skip_clock_event_type) {

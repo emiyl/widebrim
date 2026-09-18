@@ -6,5 +6,6 @@
 #include <SDL3/SDL.h>
 
 SDL_Texture *texture_from_rgba(SDL_Renderer *renderer, const uint8_t *rgba, int width, int height);
+void texture_set_global_blend_mode(SDL_BlendMode mode);
 
 #endif

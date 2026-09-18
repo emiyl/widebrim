@@ -17,6 +17,7 @@ typedef struct {
     widebrim_clock clock;
     bool running;
     bool speed_modifier;
+    bool alpha_blend_enabled;
     Uint32 engine_skip_clock_event_type;
 } widebrim_runtime;
 
