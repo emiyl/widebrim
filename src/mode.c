@@ -123,8 +123,10 @@ static void widebrim_mode_event_update(widebrim_mode *mode, widebrim_game_state 
     if (state->mode_elapsed_sec >= 2.0f) {
         if (state->current_event_id != 0u) {
             widebrim_game_state_set_movie(state, state->current_event_id);
+            widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_MOVIE);
+        } else {
+            widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_ROOM);
         }
-        widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_ROOM);
     }
 }
 
