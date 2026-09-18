@@ -1,0 +1,3 @@
+[submodule "madhatter"]
+	path = madhatter
+	url = https://github.com/emiyl/madhatter.git

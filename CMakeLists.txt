@@ -7,9 +7,19 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL3 REQUIRED sdl3)
 
+file(GLOB MADHATTER_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/madhatter/src/*.c"
+)
+
+add_library(madhatter STATIC ${MADHATTER_SOURCES})
+
+target_include_directories(madhatter PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/madhatter/include
+)
+
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    /usr/local/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/madhatter/include
     ${SDL3_INCLUDE_DIRS}
 )
 
@@ -24,13 +34,13 @@ add_executable(widebrim
 
 target_include_directories(widebrim PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    /usr/local/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/madhatter/include
     ${SDL3_INCLUDE_DIRS}
 )
 
 target_link_libraries(widebrim PRIVATE
     ${SDL3_LINK_LIBRARIES}
-    /usr/local/lib/libmadhatter.a
+    madhatter
 )
 
 # Work around pkg-config library ordering on some platforms.
