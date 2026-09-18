@@ -11,7 +11,7 @@ typedef struct {
 
 static void mode_reset_on_fade_out_done(void *user) {
     mode_reset_impl *impl = (mode_reset_impl *)user;
-    game_state_set_mode(impl->state, GAME_MODE_TITLE);
+    game_state_set_mode(impl->state, GAME_MODE_ROOM); game_state_set_place_num(impl->state, 10);
     impl->done = true;
 }
 

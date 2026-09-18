@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <mh_datafiles.h>
+#include <mh_font.h>
 
 #include "mode.h"
 
@@ -15,6 +16,8 @@ typedef struct {
     game_mode next_mode;
     int place_num;
     bool first_touch_enabled;
+    mh_font font_event;
+    bool font_event_loaded;
 } game_state;
 
 int game_state_init(game_state *gs, const char *datafiles_root, const char *language);

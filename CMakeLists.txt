@@ -31,6 +31,7 @@ add_executable(widebrim
     src/bg_layer.c
     src/fader_layer.c
     src/bg_loader.c
+    src/texture_util.c
     src/game_state.c
     src/mode_spawner.c
     src/mode_reset.c

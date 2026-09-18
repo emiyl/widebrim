@@ -2,18 +2,7 @@
 
 #include <stdlib.h>
 
-static SDL_Texture *bg_layer_texture_from_rgba(SDL_Renderer *renderer, const uint8_t *rgba, int width, int height) {
-    SDL_Texture *tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height);
-    if (!tex) {
-        return NULL;
-    }
-    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
-    if (!SDL_UpdateTexture(tex, NULL, rgba, width * 4)) {
-        SDL_DestroyTexture(tex);
-        return NULL;
-    }
-    return tex;
-}
+#include "texture_util.h"
 
 void bg_layer_init(bg_layer *bg, SDL_Renderer *renderer) {
     bg->renderer = renderer;
@@ -40,14 +29,14 @@ void bg_layer_set_main_rgba(bg_layer *bg, const uint8_t *rgba, int width, int he
     if (bg->tex_main) {
         SDL_DestroyTexture(bg->tex_main);
     }
-    bg->tex_main = bg_layer_texture_from_rgba(bg->renderer, rgba, width, height);
+    bg->tex_main = texture_from_rgba(bg->renderer, rgba, width, height);
 }
 
 void bg_layer_set_sub_rgba(bg_layer *bg, const uint8_t *rgba, int width, int height) {
     if (bg->tex_sub) {
         SDL_DestroyTexture(bg->tex_sub);
     }
-    bg->tex_sub = bg_layer_texture_from_rgba(bg->renderer, rgba, width, height);
+    bg->tex_sub = texture_from_rgba(bg->renderer, rgba, width, height);
 }
 
 void bg_layer_modify_palette_main(bg_layer *bg, uint8_t darkness) {
