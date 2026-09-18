@@ -30,6 +30,7 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
     }
     SDL_SetRenderLogicalPresentation(rt->renderer, WIDEBRIM_SCREEN_WIDTH, WIDEBRIM_SCREEN_HEIGHT * 2,
                                       SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    SDL_SetDefaultTextureScaleMode(rt->renderer, SDL_SCALEMODE_NEAREST);
 
     if (game_state_init(&rt->state, datafiles_root, language) != 0) {
         fprintf(stderr, "widebrim: failed to initialize Datafiles access at '%s'\n", datafiles_root);
