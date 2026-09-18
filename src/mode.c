@@ -87,13 +87,24 @@ static void widebrim_mode_room_draw(widebrim_mode *mode,
                                    widebrim_game_state *state,
                                    widebrim_renderer *renderer) {
     char room_name[128];
+    const char *leaf = NULL;
+    const char *basename = NULL;
 
     (void)mode;
     if (state == NULL) {
         return;
     }
 
-    if (!state->room_loaded) {
+    leaf = strrchr(state->current_room.name, '/');
+    basename = leaf != NULL ? leaf + 1 : state->current_room.name;
+    if (!state->room_loaded ||
+        basename == NULL ||
+        strcmp(basename, "map0.arc") == 0 ||
+        strcmp(basename, "map1.arc") == 0 ||
+        strcmp(basename, "main0.arc") == 0 ||
+        strcmp(basename, "main1.arc") == 0 ||
+        strcmp(basename, "room0.arc") == 0 ||
+        strcmp(basename, "room1.arc") == 0) {
         widebrim_game_state_resolve_scene_name(state,
                                               state->current_room_id,
                                               room_name,
@@ -101,7 +112,10 @@ static void widebrim_mode_room_draw(widebrim_mode *mode,
         widebrim_room_init_default(&state->current_room, state->current_room_id, room_name);
         state->room_loaded = true;
     }
-    widebrim_renderer_draw_room(renderer, &state->current_room, state->frame_counter);
+    widebrim_renderer_draw_room(renderer,
+                               &state->current_room,
+                               &state->madhatter,
+                               state->frame_counter);
 }
 
 static void widebrim_mode_room_shutdown(widebrim_mode *mode, widebrim_game_state *state) {
@@ -280,6 +294,10 @@ void widebrim_mode_manager_update(widebrim_mode_manager *manager,
     if (state->next_mode != state->current_mode) {
         widebrim_mode next;
         widebrim_mode_set_kind(&next, state->next_mode);
+        fprintf(stderr,
+                "DEBUG mode: transition %s -> %s\n",
+                widebrim_mode_kind_to_string(state->current_mode),
+                widebrim_mode_kind_to_string(state->next_mode));
         state->current_mode = state->next_mode;
         state->next_mode = WIDEBRIM_MODE_INVALID;
         widebrim_mode_manager_set(manager, &next, state);

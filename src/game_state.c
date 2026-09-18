@@ -158,18 +158,43 @@ static int widebrim_scene_name_score(const char *archive_name, uint32_t room_id)
     return score;
 }
 
+static int widebrim_archive_name_matches_room(const char *archive_name,
+                                            uint32_t room_id) {
+    char normalized[256];
+    char expected_map[64];
+    char expected_main[64];
+    char expected_room[64];
+
+    if (archive_name == NULL) {
+        return 0;
+    }
+
+    widebrim_archive_normalize_name(normalized, sizeof(normalized), archive_name);
+    snprintf(expected_map, sizeof(expected_map), "map%u.arc", room_id);
+    snprintf(expected_main, sizeof(expected_main), "main%u.arc", room_id);
+    snprintf(expected_room, sizeof(expected_room), "room%u.arc", room_id);
+
+    if (strstr(normalized, "/bg/map/") == NULL) {
+        return 0;
+    }
+
+    return (strstr(normalized, expected_map) != NULL ||
+            strstr(normalized, expected_main) != NULL ||
+            strstr(normalized, expected_room) != NULL);
+}
+
 void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
                                            uint32_t room_id,
                                            char *buffer,
                                            size_t buffer_size) {
     size_t i;
-    const char *fallback = "map0";
+    const char *fallback = "data_lt2/bg/map/map0.arc";
     static const char *preferred_names[] = {
         "data_lt2/bg/map/map%u.arc",
         "data_lt2/bg/map/main%u.arc",
+        "data_lt2/bg/map/room%u.arc",
         "bg/map/map%u.arc",
         "bg/map/main%u.arc",
-        "data_lt2/bg/map/room%u.arc",
         "data_lt2/map/map%u.arc",
         "map%u.arc",
         "main%u.arc",
@@ -216,7 +241,8 @@ void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
             best_name = name;
         }
 
-        if (widebrim_room_name_matches_archive(name, room_id)) {
+        if (widebrim_room_name_matches_archive(name, room_id) ||
+            widebrim_archive_name_matches_room(name, room_id)) {
             snprintf(buffer, buffer_size, "%s", name);
             return;
         }
@@ -227,7 +253,10 @@ void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
         return;
     }
 
-    snprintf(buffer, buffer_size, "map%u.arc", room_id);
+    snprintf(buffer,
+             buffer_size,
+             "data_lt2/bg/map/map%u.arc",
+             room_id == 0u ? 1u : room_id);
 }
 
 void widebrim_room_init_default(widebrim_room *room, uint32_t id, const char *name) {

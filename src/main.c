@@ -286,9 +286,24 @@ static int widebrim_runtime_load_asset_file(widebrim_runtime *runtime,
     uint8_t *buffer = NULL;
     size_t bytes_read = 0;
     int result = -1;
+    const char *leaf = NULL;
+    char leaf_name[256];
 
     if (runtime == NULL || archive_name == NULL || file_path == NULL) {
         return -1;
+    }
+
+    leaf = strrchr(archive_name, '/');
+    if (leaf == NULL) {
+        leaf = archive_name;
+    } else {
+        ++leaf;
+    }
+
+    if (leaf != NULL && leaf[0] != '\0') {
+        snprintf(leaf_name, sizeof(leaf_name), "%s", leaf);
+    } else {
+        leaf_name[0] = '\0';
     }
 
     fp = fopen(file_path, "rb");
@@ -327,15 +342,27 @@ static int widebrim_runtime_load_asset_file(widebrim_runtime *runtime,
     }
 
     buffer[file_size] = '\0';
+    if (strstr(archive_name, "/bg/map/") != NULL || strcmp(leaf_name, "map1.arc") == 0 || strcmp(leaf_name, "main1.arc") == 0) {
+        fprintf(stderr, "DEBUG asset register: archive=%s leaf=%s size=%ld\n", archive_name, leaf_name, file_size);
+    }
+
     result = widebrim_madhatter_load_file(&runtime->state.madhatter,
                                          archive_name,
                                          buffer,
                                          bytes_read);
+    if (result == 0 && leaf_name[0] != '\0' && strcmp(archive_name, leaf_name) != 0) {
+        result = widebrim_madhatter_load_file(&runtime->state.madhatter,
+                                             leaf_name,
+                                             buffer,
+                                             bytes_read);
+    }
     free(buffer);
     fclose(fp);
 
     if (result == 0) {
         printf("Loaded asset: %s\n", archive_name);
+    } else if (strstr(archive_name, "/bg/map/") != NULL || strcmp(leaf_name, "map1.arc") == 0 || strcmp(leaf_name, "main1.arc") == 0) {
+        fprintf(stderr, "DEBUG asset register failed: archive=%s leaf=%s result=%d\n", archive_name, leaf_name, result);
     }
 
     return result;
@@ -384,6 +411,7 @@ static int widebrim_runtime_load_datafiles_tree(widebrim_runtime *runtime,
         }
 
         if (S_ISDIR(st.st_mode)) {
+            fprintf(stderr, "DEBUG scan dir=%s\n", child_path);
             if (widebrim_runtime_load_datafiles_tree(runtime, child_path, scan_root) == 0) {
                 saw_file = 1;
             }
@@ -391,6 +419,7 @@ static int widebrim_runtime_load_datafiles_tree(widebrim_runtime *runtime,
         }
 
         if (S_ISREG(st.st_mode)) {
+            fprintf(stderr, "DEBUG scan file=%s\n", child_path);
             if (strstr(name, ".DS_Store") != NULL) {
                 continue;
             }
@@ -403,7 +432,6 @@ static int widebrim_runtime_load_datafiles_tree(widebrim_runtime *runtime,
                 if (archive_name[0] != '\0' &&
                     widebrim_runtime_load_pack_candidate(runtime, child_path, 1) == 0) {
                     saw_file = 1;
-                    return 0;
                 }
             }
 
@@ -454,6 +482,15 @@ static int widebrim_runtime_load_pack_arg(widebrim_runtime *runtime,
         if (scan_root == path || strcmp(path, scan_root) == 0 || strcmp(path, datafiles_path) != 0) {
             printf("Loading extracted Datafiles tree: %s\n", scan_root);
             if (widebrim_runtime_load_datafiles_tree(runtime, scan_root, scan_root) == 0) {
+                runtime->state.room_loaded = false;
+                widebrim_game_state_resolve_scene_name(&runtime->state,
+                                                      runtime->state.current_room_id,
+                                                      runtime->state.current_room.name,
+                                                      sizeof(runtime->state.current_room.name));
+                widebrim_room_init_default(&runtime->state.current_room,
+                                           runtime->state.current_room_id,
+                                           runtime->state.current_room.name);
+                runtime->state.room_loaded = true;
                 return 0;
             }
         }
@@ -542,7 +579,31 @@ int main(int argc, char **argv) {
             fprintf(stderr, "This usually means the file is a real Datafiles pack with a PCK2/LPC2 signature that the current Madhatter parser rejects.\n");
         }
     } else {
-        printf("No Layton pack supplied; running in debug bootstrap mode.\n");
+        static const char *const auto_paths[] = {
+            "./build/LAYTON2 (YLTP by 01)/Datafiles",
+            "./build/LAYTON2 (YLTP by 01)",
+            "./build",
+            "build/LAYTON2 (YLTP by 01)/Datafiles",
+            "build/LAYTON2 (YLTP by 01)",
+            "build"
+        };
+        int found_auto_path = 0;
+
+        printf("No Layton pack supplied; trying default Datafiles paths.\n");
+        for (size_t i = 0u; i < sizeof(auto_paths) / sizeof(auto_paths[0]); ++i) {
+            struct stat st;
+            if (stat(auto_paths[i], &st) == 0 && S_ISDIR(st.st_mode)) {
+                printf("Auto-loading extracted Datafiles: %s\n", auto_paths[i]);
+                if (widebrim_runtime_load_pack_arg(&runtime, auto_paths[i], version) == 0) {
+                    found_auto_path = 1;
+                    break;
+                }
+            }
+        }
+
+        if (!found_auto_path) {
+            printf("No default Datafiles directory found; running in debug bootstrap mode.\n");
+        }
     }
 
     widebrim_runtime_run(&runtime);

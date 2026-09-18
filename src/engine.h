@@ -156,6 +156,7 @@ void widebrim_renderer_draw_debug_screen(widebrim_renderer *renderer,
                                         uint32_t frame_counter);
 void widebrim_renderer_draw_room(widebrim_renderer *renderer,
                                 const widebrim_room *room,
+                                const widebrim_madhatter *madhatter,
                                 uint32_t frame_counter);
 
 void widebrim_room_init_default(widebrim_room *room, uint32_t id, const char *name);
