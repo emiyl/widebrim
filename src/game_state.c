@@ -317,6 +317,8 @@ void widebrim_game_state_set_next_mode(widebrim_game_state *state,
         return;
     }
 
+    printf("Setting next mode: %s\n", widebrim_mode_kind_to_string(next_mode));
+
     state->next_mode = next_mode;
     if (state->current_mode == next_mode) {
         state->mode_elapsed_sec = 0.0f;

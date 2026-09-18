@@ -46,6 +46,40 @@ typedef enum {
     WIDEBRIM_MODE_INVALID = 255
 } widebrim_mode_kind;
 
+static const char *widebrim_mode_kind_to_string(widebrim_mode_kind kind) {
+    switch (kind) {
+        case WIDEBRIM_MODE_BOOT: return "BOOT";
+        case WIDEBRIM_MODE_ROOM: return "ROOM";
+        case WIDEBRIM_MODE_EVENT: return "EVENT";
+        case WIDEBRIM_MODE_MOVIE: return "MOVIE";
+        case WIDEBRIM_MODE_START_PUZZLE: return "START_PUZZLE";
+        case WIDEBRIM_MODE_END_PUZZLE: return "END_PUZZLE";
+        case WIDEBRIM_MODE_STAY_PUZZLE: return "STAY_PUZZLE";
+        case WIDEBRIM_MODE_PUZZLE: return "PUZZLE";
+        case WIDEBRIM_MODE_TITLE: return "TITLE";
+        case WIDEBRIM_MODE_NARRATION: return "NARRATION";
+        case WIDEBRIM_MODE_BAG: return "BAG";
+        case WIDEBRIM_MODE_NAME: return "NAME";
+        case WIDEBRIM_MODE_MEMO: return "MEMO";
+        case WIDEBRIM_MODE_EVENT_TEA: return "EVENT_TEA";
+        case WIDEBRIM_MODE_SECRET_MENU: return "SECRET_MENU";
+        case WIDEBRIM_MODE_TOP_SECRET_MENU: return "TOP_SECRET_MENU";
+        case WIDEBRIM_MODE_ART_MODE: return "ART_MODE";
+        case WIDEBRIM_MODE_CHR_VIEW_MODE: return "CHR_VIEW_MODE";
+        case WIDEBRIM_MODE_MOVIE_VIEW_MODE: return "MOVIE_VIEW_MODE";
+        case WIDEBRIM_MODE_HAMSTER_NAME: return "HAMSTER_NAME";
+        case WIDEBRIM_MODE_NINTENDO_WFC_SETUP: return "NINTENDO_WFC_SETUP";
+        case WIDEBRIM_MODE_WIFI_DOWNLOAD_PUZZLE: return "WIFI_DOWNLOAD_PUZZLE";
+        case WIDEBRIM_MODE_PASSCODE: return "PASSCODE";
+        case WIDEBRIM_MODE_CODE_INPUT_PANDORA: return "CODE_INPUT_PANDORA";
+        case WIDEBRIM_MODE_CODE_INPUT_FUTURE: return "CODE_INPUT_FUTURE";
+        case WIDEBRIM_MODE_DIARY: return "DIARY";
+        case WIDEBRIM_MODE_NAZOBA: return "NAZOBA";
+        case WIDEBRIM_MODE_INVALID: return "INVALID";
+        default: return "UNKNOWN";
+    }
+}
+
 typedef struct widebrim_renderer {
     SDL_Window *window;
     SDL_Renderer *renderer;
