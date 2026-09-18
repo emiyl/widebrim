@@ -13,6 +13,13 @@ typedef struct {
 
 int widebrim_madhatter_init(widebrim_madhatter *ctx);
 void widebrim_madhatter_free(widebrim_madhatter *ctx);
+int widebrim_madhatter_load_file(widebrim_madhatter *ctx,
+                                const char *name,
+                                const uint8_t *data,
+                                size_t len);
+int widebrim_madhatter_load_file_from_path(widebrim_madhatter *ctx,
+                                         const char *path,
+                                         const char *archive_name);
 int widebrim_madhatter_load_layton_pack(widebrim_madhatter *ctx,
                                        const uint8_t *data,
                                        size_t len,

@@ -57,6 +57,13 @@ typedef struct widebrim_runtime {
     bool running;
 } widebrim_runtime;
 
+int widebrim_runtime_load_pack_data(widebrim_runtime *runtime,
+                                   const uint8_t *data,
+                                   size_t len,
+                                   int version);
+int widebrim_runtime_load_pack_from_path(widebrim_runtime *runtime,
+                                       const char *path,
+                                       int version);
 void widebrim_runtime_init(widebrim_runtime *runtime);
 void widebrim_runtime_destroy(widebrim_runtime *runtime);
 void widebrim_runtime_run(widebrim_runtime *runtime);
