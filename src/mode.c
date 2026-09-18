@@ -273,10 +273,11 @@ void widebrim_mode_manager_update(widebrim_mode_manager *manager,
         return;
     }
 
-    if (state->next_mode != state->current_mode) {
+    if (state->next_mode != WIDEBRIM_MODE_INVALID && state->next_mode != state->current_mode) {
         widebrim_mode next;
         widebrim_mode_set_kind(&next, state->next_mode);
         state->current_mode = state->next_mode;
+        state->next_mode = WIDEBRIM_MODE_INVALID;
         widebrim_mode_manager_set(manager, &next, state);
         state->mode_elapsed_sec = 0.0f;
     }
