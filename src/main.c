@@ -149,6 +149,9 @@ void widebrim_runtime_init(widebrim_runtime *runtime) {
     widebrim_renderer_init(&runtime->renderer, "widebrim-c");
     widebrim_game_state_init(&runtime->state);
     widebrim_mode_manager_init(&runtime->modes);
+    if (runtime->modes.has_current && runtime->modes.current.init != NULL) {
+        runtime->modes.current.init(&runtime->modes.current, &runtime->state);
+    }
     runtime->running = true;
 }
 
@@ -186,16 +189,13 @@ void widebrim_runtime_run(widebrim_runtime *runtime) {
                                event.key.key == SDL_SCANCODE_SPACE) {
                         switch (runtime->state.current_mode) {
                             case WIDEBRIM_MODE_TITLE:
-                                runtime->state.current_mode = WIDEBRIM_MODE_ROOM;
-                                runtime->state.mode_elapsed_sec = 0.0f;
+                                widebrim_game_state_set_mode(&runtime->state, WIDEBRIM_MODE_ROOM);
                                 break;
                             case WIDEBRIM_MODE_ROOM:
-                                runtime->state.current_mode = WIDEBRIM_MODE_EVENT;
-                                runtime->state.mode_elapsed_sec = 0.0f;
+                                widebrim_game_state_set_mode(&runtime->state, WIDEBRIM_MODE_EVENT);
                                 break;
                             case WIDEBRIM_MODE_EVENT:
-                                runtime->state.current_mode = WIDEBRIM_MODE_TITLE;
-                                runtime->state.mode_elapsed_sec = 0.0f;
+                                widebrim_game_state_set_mode(&runtime->state, WIDEBRIM_MODE_TITLE);
                                 break;
                             default:
                                 break;

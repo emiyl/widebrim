@@ -9,10 +9,13 @@ static void widebrim_mode_boot_init(widebrim_mode *mode, widebrim_game_state *st
 
 static void widebrim_mode_boot_update(widebrim_mode *mode, widebrim_game_state *state, float dt) {
     (void)mode;
+    if (state == NULL) {
+        return;
+    }
+
     state->mode_elapsed_sec += dt;
     if (state->mode_elapsed_sec >= 0.5f) {
-        state->mode_elapsed_sec = 0.0f;
-        state->current_mode = WIDEBRIM_MODE_TITLE;
+        widebrim_game_state_set_mode(state, WIDEBRIM_MODE_TITLE);
     }
 }
 

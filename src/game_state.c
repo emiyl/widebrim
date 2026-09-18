@@ -163,6 +163,25 @@ void widebrim_room_init_default(widebrim_room *room, uint32_t id, const char *na
     room->hotspot_y = WIDEBRIM_SCREEN_HEIGHT / 2;
 }
 
+void widebrim_game_state_set_mode(widebrim_game_state *state,
+                                 widebrim_mode_kind next_mode) {
+    if (state == NULL) {
+        return;
+    }
+
+    if (state->current_mode == next_mode) {
+        state->mode_elapsed_sec = 0.0f;
+        return;
+    }
+
+    state->current_mode = next_mode;
+    state->mode_elapsed_sec = 0.0f;
+
+    if (next_mode == WIDEBRIM_MODE_ROOM) {
+        state->room_loaded = false;
+    }
+}
+
 void widebrim_game_state_load_scene(widebrim_game_state *state, uint32_t room_id) {
     char scene_name[128];
 
@@ -185,8 +204,8 @@ void widebrim_game_state_init(widebrim_game_state *state) {
     state->frame_counter = 0;
     state->last_tick_ms = 0;
     state->mode_elapsed_sec = 0.0f;
-    widebrim_game_state_load_scene(state, 1);
     widebrim_madhatter_init(&state->madhatter);
+    widebrim_game_state_load_scene(state, 1);
 }
 
 void widebrim_game_state_destroy(widebrim_game_state *state) {
