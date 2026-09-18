@@ -46,6 +46,9 @@ typedef struct widebrim_game_state {
     uint32_t frame_counter;
     uint32_t last_tick_ms;
     float mode_elapsed_sec;
+    uint32_t current_room_id;
+    uint32_t current_event_id;
+    uint32_t current_movie_id;
     widebrim_room current_room;
     bool room_loaded;
 } widebrim_game_state;
@@ -99,6 +102,7 @@ void widebrim_game_state_resolve_scene_name(widebrim_game_state *state,
                                            uint32_t room_id,
                                            char *buffer,
                                            size_t buffer_size);
+void widebrim_game_state_set_room(widebrim_game_state *state, uint32_t room_id);
 void widebrim_game_state_set_mode(widebrim_game_state *state,
                                  widebrim_mode_kind next_mode);
 void widebrim_game_state_load_scene(widebrim_game_state *state, uint32_t room_id);

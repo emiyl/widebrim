@@ -57,7 +57,8 @@ static void widebrim_mode_title_shutdown(widebrim_mode *mode, widebrim_game_stat
 static void widebrim_mode_room_init(widebrim_mode *mode, widebrim_game_state *state) {
     (void)mode;
     if (state != NULL) {
-        widebrim_game_state_load_scene(state, 1);
+        widebrim_game_state_set_room(state, state->current_room_id == 0u ? 1u : state->current_room_id);
+        widebrim_game_state_load_scene(state, state->current_room_id);
     }
 }
 
