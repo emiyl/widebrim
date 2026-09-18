@@ -71,8 +71,8 @@ mode_handler mode_drama_event_create(game_state *state, screen_controller *contr
     fprintf(stderr, "widebrim: loading drama event %d\n", impl->event_id);
 
     /* Minimal placeholder event setup: load a neutral background and fade in. */
-    bg_loader_load(state, controller, "data_lt2/bg/title/title.arc", screen_controller_set_bg_main);
-    bg_loader_load(state, controller, "data_lt2/bg/title/title_sub.arc", screen_controller_set_bg_sub);
+    bg_loader_load(state, controller, "bg/title/title.arc", screen_controller_set_bg_main);
+    bg_loader_load(state, controller, "bg/title/title_sub.arc", screen_controller_set_bg_sub);
     screen_controller_fade_in(controller, FADER_DEFAULT_DURATION_MS, NULL, NULL);
 
     handler.layer.impl = impl;

@@ -41,7 +41,7 @@ static void mode_room_load_exit_sprites(mode_room_impl *impl) {
         mh_buffer data;
         mh_anim_image anim;
 
-        snprintf(path, sizeof(path), "data_lt2/ani/map/exit_%d.arc", i);
+        snprintf(path, sizeof(path), "ani/map/exit_%d.arc", i);
         mh_buffer_init(&data);
         if (mh_datafiles_get_data(&impl->state->datafiles, path, &data) != 0) {
             continue;
@@ -73,7 +73,7 @@ static void mode_room_load_title_text(mode_room_impl *impl) {
         return;
     }
 
-    snprintf(pack_path, sizeof(pack_path), "data_lt2/nazo/%s/jiten.plz", impl->state->datafiles.language);
+    snprintf(pack_path, sizeof(pack_path), "nazo/%s/jiten.plz", impl->state->datafiles.language);
     snprintf(entry_name, sizeof(entry_name), "p_%u.txt", (unsigned)impl->place.id_name_place);
 
     mh_buffer_init(&text_data);
@@ -107,7 +107,7 @@ static bool mode_room_load_current(mode_room_impl *impl) {
     mh_buffer place_bytes;
     int place_num = game_state_get_place_num(impl->state);
 
-    snprintf(pack_path, sizeof(pack_path), "data_lt2/place/%s",
+    snprintf(pack_path, sizeof(pack_path), "place/%s",
              place_num < 40 ? "plc_data1.plz" : "plc_data2.plz");
     snprintf(entry_name, sizeof(entry_name), "n_place%d_%d.dat", place_num, impl->room_sub_index);
 
@@ -123,8 +123,8 @@ static bool mode_room_load_current(mode_room_impl *impl) {
     }
     mh_buffer_free(&place_bytes);
 
-    snprintf(bg_main_path, sizeof(bg_main_path), "data_lt2/bg/map/main%u.arc", impl->place.bg_main_id);
-    snprintf(bg_map_path, sizeof(bg_map_path), "data_lt2/bg/map/map%u.arc", impl->place.bg_map_id);
+    snprintf(bg_main_path, sizeof(bg_main_path), "bg/map/main%u.arc", impl->place.bg_main_id);
+    snprintf(bg_map_path, sizeof(bg_map_path), "bg/map/map%u.arc", impl->place.bg_map_id);
     bg_loader_load(impl->state, impl->controller, bg_main_path, screen_controller_set_bg_main);
     bg_loader_load(impl->state, impl->controller, bg_map_path, screen_controller_set_bg_sub);
     mode_room_load_title_text(impl);

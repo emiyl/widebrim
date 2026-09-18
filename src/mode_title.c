@@ -51,8 +51,8 @@ mode_handler mode_title_create(game_state *state, screen_controller *controller)
     impl->state = state;
     impl->done = false;
 
-    bg_loader_load(state, controller, "data_lt2/bg/title/title.arc", screen_controller_set_bg_main);
-    bg_loader_load(state, controller, "data_lt2/bg/title/title_sub.arc", screen_controller_set_bg_sub);
+    bg_loader_load(state, controller, "bg/title/title.arc", screen_controller_set_bg_main);
+    bg_loader_load(state, controller, "bg/title/title_sub.arc", screen_controller_set_bg_sub);
     screen_controller_fade_in(controller, FADER_DEFAULT_DURATION_MS, NULL, NULL);
 
     handler.layer.impl = impl;

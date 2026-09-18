@@ -14,7 +14,7 @@ int game_state_init(game_state *gs, const char *datafiles_root, const char *lang
     game_state_reset(gs);
 
     mh_buffer_init(&font_data);
-    if (mh_datafiles_get_data(&gs->datafiles, "data_lt2/font/fontevent.NFTR", &font_data) == 0) {
+    if (mh_datafiles_get_data(&gs->datafiles, "font/fontevent.NFTR", &font_data) == 0) {
         gs->font_event_loaded = mh_font_load_nftr(&gs->font_event, font_data.data, font_data.len) == 0;
     }
     mh_buffer_free(&font_data);
