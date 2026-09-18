@@ -64,6 +64,7 @@ static void widebrim_mode_title_shutdown(widebrim_mode *mode, widebrim_game_stat
 static void widebrim_mode_room_init(widebrim_mode *mode, widebrim_game_state *state) {
     (void)mode;
     if (state != NULL) {
+        widebrim_game_state_set_mode(state, WIDEBRIM_MODE_ROOM);
         widebrim_game_state_set_room(state, state->current_room_id == 0u ? 1u : state->current_room_id);
         widebrim_game_state_load_scene(state, state->current_room_id);
     }
@@ -157,6 +158,7 @@ static void widebrim_mode_movie_update(widebrim_mode *mode,
 
     state->mode_elapsed_sec += dt;
     if (state->mode_elapsed_sec >= 1.5f) {
+        state->room_loaded = false;
         widebrim_game_state_set_next_mode(state, WIDEBRIM_MODE_ROOM);
     }
 }
@@ -276,6 +278,7 @@ void widebrim_mode_manager_update(widebrim_mode_manager *manager,
         widebrim_mode_set_kind(&next, state->next_mode);
         state->current_mode = state->next_mode;
         widebrim_mode_manager_set(manager, &next, state);
+        state->mode_elapsed_sec = 0.0f;
     }
 }
 

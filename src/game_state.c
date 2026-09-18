@@ -312,7 +312,14 @@ void widebrim_game_state_set_next_mode(widebrim_game_state *state,
         return;
     }
 
+    if (state->next_mode != next_mode || state->current_mode == next_mode) {
+        state->mode_elapsed_sec = 0.0f;
+    }
+
     state->next_mode = next_mode;
+    if (next_mode == WIDEBRIM_MODE_ROOM) {
+        state->room_loaded = false;
+    }
     if (state->current_mode == next_mode) {
         state->mode_elapsed_sec = 0.0f;
     }
