@@ -15,6 +15,18 @@
 #define MODE_ROOM_EXIT_IMAGE_COUNT 8
 #define MODE_ROOM_TITLE_CENTER_X 170
 #define MODE_ROOM_TITLE_Y 7
+#define MODE_ROOM_MOVE_TOGGLE_X 255
+#define MODE_ROOM_MOVE_TOGGLE_Y 8
+#define MODE_ROOM_MOVE_TOGGLE_W 50
+#define MODE_ROOM_MOVE_TOGGLE_H 18
+#define MODE_ROOM_MENU_TOGGLE_X 205
+#define MODE_ROOM_MENU_TOGGLE_Y 8
+#define MODE_ROOM_MENU_TOGGLE_W 42
+#define MODE_ROOM_MENU_TOGGLE_H 18
+#define MODE_ROOM_CAMERA_TOGGLE_X 150
+#define MODE_ROOM_CAMERA_TOGGLE_Y 8
+#define MODE_ROOM_CAMERA_TOGGLE_W 42
+#define MODE_ROOM_CAMERA_TOGGLE_H 18
 
 // simplified roomplayer, shows room's top/bottom background and lets the player
 // click through rooms. NPCs, party members, tea events, photo pieces and 
@@ -26,7 +38,13 @@ typedef struct {
     int room_sub_index;
     int pending_place_num;
     bool done;
+    bool in_move_mode;
+    int highlighted_exit_index;
     SDL_Texture *exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
+    SDL_Texture *exit_sprites_highlighted[MODE_ROOM_EXIT_IMAGE_COUNT];
+    SDL_Texture *move_button_texture;
+    SDL_Texture *menu_button_texture;
+    SDL_Texture *camera_button_texture;
     SDL_Texture *title_texture;
     int title_width;
     int title_height;
@@ -48,13 +66,116 @@ static void mode_room_load_exit_sprites(mode_room_impl *impl) {
         }
         if (mh_anim_decode_arc(data.data, data.len, &anim) == 0) {
             const mh_anim_frame *frame = mh_anim_get_frame_by_animation_name(&anim, "gfx");
+            const mh_anim_frame *highlight_frame = mh_anim_get_frame_by_animation_name(&anim, "gfx2");
             if (frame) {
                 impl->exit_sprites[i] = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
+            }
+            if (highlight_frame) {
+                impl->exit_sprites_highlighted[i] = texture_from_rgba(renderer, highlight_frame->pixels,
+                                                                       highlight_frame->width,
+                                                                       highlight_frame->height);
+            } else if (frame) {
+                impl->exit_sprites_highlighted[i] = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
             }
             mh_anim_free(&anim);
         }
         mh_buffer_free(&data);
     }
+}
+
+static bool mode_room_point_in_rect(float x, float y, const mh_bounding_box *box) {
+    return x >= box->x && x < box->x + box->width &&
+           y >= box->y && y < box->y + box->height;
+}
+
+static int mode_room_find_exit_index_at_point(mode_room_impl *impl, float x, float y) {
+    size_t i;
+
+    for (i = 0; i < impl->place.exit_count; ++i) {
+        const mh_place_exit *exit = &impl->place.exits[i];
+        if (mode_room_point_in_rect(x, y, &exit->bounding)) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+static bool mode_room_button_rect_contains_point(int x, int y, int rect_x, int rect_y, int rect_w, int rect_h) {
+    return x >= rect_x && x < rect_x + rect_w &&
+           y >= rect_y && y < rect_y + rect_h;
+}
+
+static SDL_Texture *mode_room_load_button_texture(game_state *state, SDL_Renderer *renderer,
+                                                 const char *path, const char *fallback_name) {
+    mh_buffer data;
+    mh_anim_image anim;
+    const mh_anim_frame *frame = NULL;
+    SDL_Texture *texture = NULL;
+    static const char *names[] = { "off", "on", "click", "default", "0", "1", "2" };
+    size_t i;
+
+    mh_buffer_init(&data);
+    if (mh_datafiles_get_data(&state->datafiles, path, &data) != 0) {
+        mh_buffer_free(&data);
+        return NULL;
+    }
+
+    if (mh_anim_decode_arc(data.data, data.len, &anim) == 0) {
+        if (fallback_name && (frame = mh_anim_get_frame_by_animation_name(&anim, fallback_name)) != NULL) {
+            texture = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
+        }
+        if (!texture) {
+            for (i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
+                frame = mh_anim_get_frame_by_animation_name(&anim, names[i]);
+                if (frame) {
+                    texture = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
+                    break;
+                }
+            }
+        }
+        if (!texture && anim.frame_count > 0u) {
+            texture = texture_from_rgba(renderer, anim.frames[0].pixels, anim.frames[0].width, anim.frames[0].height);
+        }
+        mh_anim_free(&anim);
+    }
+    mh_buffer_free(&data);
+    return texture;
+}
+
+static bool mode_room_toggle_rect_contains_point(mode_room_impl *impl, float x, float y) {
+    (void)impl;
+    return mode_room_button_rect_contains_point((int)x, (int)y,
+                                               MODE_ROOM_MOVE_TOGGLE_X, MODE_ROOM_MOVE_TOGGLE_Y,
+                                               MODE_ROOM_MOVE_TOGGLE_W, MODE_ROOM_MOVE_TOGGLE_H);
+}
+
+static bool mode_room_menu_rect_contains_point(mode_room_impl *impl, float x, float y) {
+    (void)impl;
+    return mode_room_button_rect_contains_point((int)x, (int)y,
+                                               MODE_ROOM_MENU_TOGGLE_X, MODE_ROOM_MENU_TOGGLE_Y,
+                                               MODE_ROOM_MENU_TOGGLE_W, MODE_ROOM_MENU_TOGGLE_H);
+}
+
+static bool mode_room_camera_rect_contains_point(mode_room_impl *impl, float x, float y) {
+    (void)impl;
+    return mode_room_button_rect_contains_point((int)x, (int)y,
+                                               MODE_ROOM_CAMERA_TOGGLE_X, MODE_ROOM_CAMERA_TOGGLE_Y,
+                                               MODE_ROOM_CAMERA_TOGGLE_W, MODE_ROOM_CAMERA_TOGGLE_H);
+}
+
+static void mode_room_set_move_mode(mode_room_impl *impl, bool enabled) {
+    impl->in_move_mode = enabled;
+    impl->highlighted_exit_index = -1;
+}
+
+static bool mode_room_handle_key(void *implp, const SDL_Event *event) {
+    mode_room_impl *impl = (mode_room_impl *)implp;
+
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_M) {
+        mode_room_set_move_mode(impl, !impl->in_move_mode);
+        return true;
+    }
+    return false;
 }
 
 static void mode_room_load_title_text(mode_room_impl *impl) {
@@ -141,18 +262,69 @@ static void mode_room_on_transition_fade_done(void *user) {
 static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
     mode_room_impl *impl = (mode_room_impl *)implp;
     float x, y;
-    size_t i;
+    int exit_index;
+
+    if (event->type == SDL_EVENT_MOUSE_MOTION) {
+        if (!impl->in_move_mode) {
+            return false;
+        }
+        x = event->motion.x;
+        y = event->motion.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+        exit_index = mode_room_find_exit_index_at_point(impl, x, y);
+        if (exit_index != impl->highlighted_exit_index) {
+            impl->highlighted_exit_index = exit_index;
+        }
+        return true;
+    }
 
     if (event->type != SDL_EVENT_MOUSE_BUTTON_DOWN) {
         return false;
     }
     x = event->button.x;
-    y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT; /* exits are given in top-screen-local coordinates */
+    y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
 
-    for (i = 0; i < impl->place.exit_count; ++i) {
+    if (mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y)) {
+        mode_room_set_move_mode(impl, !impl->in_move_mode);
+        return true;
+    }
+    if (mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y)) {
+        fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
+        mode_room_set_move_mode(impl, false);
+        return true;
+    }
+    if (mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y)) {
+        fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
+        mode_room_set_move_mode(impl, false);
+        return true;
+    }
+
+    if (impl->in_move_mode) {
+        exit_index = mode_room_find_exit_index_at_point(impl, x, y);
+        if (exit_index >= 0) {
+            const mh_place_exit *exit = &impl->place.exits[exit_index];
+            if (mh_place_exit_can_spawn_event(exit)) {
+                fprintf(stderr,
+                        "widebrim: exit %d triggers a scripted event (mode_decoding=%u); "
+                        "switching to DramaEvent\n",
+                        exit_index, exit->mode_decoding);
+                game_state_set_event_id(impl->state, exit->spawn_data);
+                game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
+                game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
+                impl->done = true;
+                return true;
+            }
+            impl->pending_place_num = exit->spawn_data;
+            screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
+                                        mode_room_on_transition_fade_done, impl);
+            return true;
+        }
+        mode_room_set_move_mode(impl, false);
+        return true;
+    }
+
+    for (size_t i = 0; i < impl->place.exit_count; ++i) {
         const mh_place_exit *exit = &impl->place.exits[i];
-        if (x >= exit->bounding.x && x < exit->bounding.x + exit->bounding.width &&
-            y >= exit->bounding.y && y < exit->bounding.y + exit->bounding.height) {
+        if (mode_room_point_in_rect(x, y, &exit->bounding)) {
             if (mh_place_exit_can_spawn_event(exit)) {
                 fprintf(stderr,
                         "widebrim: exit %zu triggers a scripted event (mode_decoding=%u); "
@@ -177,9 +349,54 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
     mode_room_impl *impl = (mode_room_impl *)implp;
     size_t i;
 
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    SDL_FRect move_toggle_rect = { (float)MODE_ROOM_MOVE_TOGGLE_X,
+                                   (float)MODE_ROOM_MOVE_TOGGLE_Y + (float)WIDEBRIM_SCREEN_HEIGHT,
+                                   (float)MODE_ROOM_MOVE_TOGGLE_W, (float)MODE_ROOM_MOVE_TOGGLE_H };
+    SDL_FRect menu_toggle_rect = { (float)MODE_ROOM_MENU_TOGGLE_X,
+                                   (float)MODE_ROOM_MENU_TOGGLE_Y + (float)WIDEBRIM_SCREEN_HEIGHT,
+                                   (float)MODE_ROOM_MENU_TOGGLE_W, (float)MODE_ROOM_MENU_TOGGLE_H };
+    SDL_FRect camera_toggle_rect = { (float)MODE_ROOM_CAMERA_TOGGLE_X,
+                                     (float)MODE_ROOM_CAMERA_TOGGLE_Y + (float)WIDEBRIM_SCREEN_HEIGHT,
+                                     (float)MODE_ROOM_CAMERA_TOGGLE_W, (float)MODE_ROOM_CAMERA_TOGGLE_H };
+
+    if (impl->move_button_texture) {
+        SDL_RenderTexture(renderer, impl->move_button_texture, NULL, &move_toggle_rect);
+    } else {
+        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 180);
+        SDL_RenderFillRect(renderer, &move_toggle_rect);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+        SDL_RenderRect(renderer, &move_toggle_rect);
+    }
+    if (impl->menu_button_texture) {
+        SDL_RenderTexture(renderer, impl->menu_button_texture, NULL, &menu_toggle_rect);
+    } else {
+        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 180);
+        SDL_RenderFillRect(renderer, &menu_toggle_rect);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+        SDL_RenderRect(renderer, &menu_toggle_rect);
+    }
+    if (impl->camera_button_texture) {
+        SDL_RenderTexture(renderer, impl->camera_button_texture, NULL, &camera_toggle_rect);
+    } else {
+        SDL_SetRenderDrawColor(renderer, 32, 32, 32, 180);
+        SDL_RenderFillRect(renderer, &camera_toggle_rect);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+        SDL_RenderRect(renderer, &camera_toggle_rect);
+    }
+
     for (i = 0; i < impl->place.exit_count; ++i) {
         const mh_place_exit *exit = &impl->place.exits[i];
-        SDL_Texture *sprite = exit->id_image < MODE_ROOM_EXIT_IMAGE_COUNT ? impl->exit_sprites[exit->id_image] : NULL;
+        SDL_Texture *sprite = NULL;
+        if (exit->id_image < MODE_ROOM_EXIT_IMAGE_COUNT) {
+            if (impl->in_move_mode && (int)i == impl->highlighted_exit_index) {
+                sprite = impl->exit_sprites_highlighted[exit->id_image] ? impl->exit_sprites_highlighted[exit->id_image]
+                                                                      : impl->exit_sprites[exit->id_image];
+            } else {
+                sprite = impl->exit_sprites[exit->id_image];
+            }
+        }
         SDL_FRect rect;
         rect.x = (float)exit->bounding.x;
         rect.y = (float)exit->bounding.y + (float)WIDEBRIM_SCREEN_HEIGHT;
@@ -218,6 +435,18 @@ static void mode_room_destroy(void *implp) {
         if (impl->exit_sprites[i]) {
             SDL_DestroyTexture(impl->exit_sprites[i]);
         }
+        if (impl->exit_sprites_highlighted[i]) {
+            SDL_DestroyTexture(impl->exit_sprites_highlighted[i]);
+        }
+    }
+    if (impl->move_button_texture) {
+        SDL_DestroyTexture(impl->move_button_texture);
+    }
+    if (impl->menu_button_texture) {
+        SDL_DestroyTexture(impl->menu_button_texture);
+    }
+    if (impl->camera_button_texture) {
+        SDL_DestroyTexture(impl->camera_button_texture);
     }
     if (impl->title_texture) {
         SDL_DestroyTexture(impl->title_texture);
@@ -234,13 +463,25 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->room_sub_index = 0;
     impl->pending_place_num = 0;
     impl->done = false;
+    impl->in_move_mode = false;
+    impl->highlighted_exit_index = -1;
+    impl->move_button_texture = NULL;
+    impl->menu_button_texture = NULL;
+    impl->camera_button_texture = NULL;
     impl->title_texture = NULL;
     impl->title_width = 0;
     impl->title_height = 0;
     memset(&impl->place, 0, sizeof(impl->place));
     memset(impl->exit_sprites, 0, sizeof(impl->exit_sprites));
+    memset(impl->exit_sprites_highlighted, 0, sizeof(impl->exit_sprites_highlighted));
 
     mode_room_load_exit_sprites(impl);
+    impl->move_button_texture = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                              "ani/map/movemode.arc", "off");
+    impl->menu_button_texture = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                              "ani/map/menu_icon.arc", "off");
+    impl->camera_button_texture = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                                "ani/map/camera_icon.arc", "off");
     if (!mode_room_load_current(impl)) {
         fprintf(stderr, "widebrim: room mode failed to load place_num=%d\n", game_state_get_place_num(state));
     }
@@ -249,7 +490,7 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     handler.layer.impl = impl;
     handler.layer.update = NULL;
     handler.layer.draw = mode_room_draw;
-    handler.layer.handle_key = NULL;
+    handler.layer.handle_key = mode_room_handle_key;
     handler.layer.handle_touch = mode_room_handle_touch;
     handler.layer.on_quit = NULL;
     handler.layer.destroy = mode_room_destroy;
