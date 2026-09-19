@@ -1,6 +1,7 @@
 #include "game_state.h"
 
 #include <string.h>
+#include <stdio.h>
 
 int game_state_init(game_state *gs, const char *datafiles_root, const char *language) {
     mh_buffer font_data;
@@ -29,10 +30,8 @@ void game_state_destroy(game_state *gs) {
     mh_datafiles_free(&gs->datafiles);
 }
 
-/* Clears session/progression state only - deliberately leaves current/next
- * mode untouched, since the mode spawner sets those around this call. */
 void game_state_reset(game_state *gs) {
-    gs->place_num = 0;
+    gs->place_num = 1;
     gs->event_id = -1;
     gs->first_touch_enabled = true;
 }
@@ -64,6 +63,7 @@ int game_state_get_place_num(const game_state *gs) {
 }
 
 void game_state_set_place_num(game_state *gs, int place_num) {
+    fprintf(stderr, "widebrim: Setting place_num to %d\n", place_num);
     gs->place_num = place_num;
 }
 
