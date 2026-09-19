@@ -70,6 +70,12 @@ typedef struct {
     int height;
 } mode_room_title_state;
 
+typedef struct {
+    renderer_texture *texture;
+    int width;
+    int height;
+} mode_room_event_sprite_state;
+
 // simplified roomplayer, shows room's top/bottom background and lets the player
 // click through rooms. NPCs, party members, tea events, photo pieces and 
 // tobj popups are all deferred as they need event scripting
@@ -89,6 +95,7 @@ typedef struct {
     mode_room_bg_anim_state bg_animations[MH_PLACE_BGANI_COUNT];
     size_t bg_animation_count;
     mode_room_exit_sprite_state exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
+    mode_room_event_sprite_state event_sprites[MH_PLACE_EVENT_COUNT];
     mode_room_title_state title;
 } mode_room_impl;
 
@@ -133,6 +140,18 @@ static void mode_room_load_exit_sprites(mode_room_impl *impl) {
 static bool mode_room_point_in_rect(float x, float y, const mh_bounding_box *box) {
     return x >= box->x && x < box->x + box->width &&
            y >= box->y && y < box->y + box->height;
+}
+
+static int mode_room_find_event_index_at_point(mode_room_impl *impl, float x, float y) {
+    size_t i;
+
+    for (i = 0; i < impl->place.event_count; ++i) {
+        const mh_place_event *event = &impl->place.events[i];
+        if (mode_room_point_in_rect(x, y, &event->bounding)) {
+            return (int)i;
+        }
+    }
+    return -1;
 }
 
 static int mode_room_find_exit_index_at_point(mode_room_impl *impl, float x, float y) {
@@ -498,6 +517,59 @@ static bool mode_room_handle_key(void *implp, const wb_input_event *event) {
     return false;
 }
 
+static void mode_room_load_event_sprites(mode_room_impl *impl) {
+    size_t i;
+
+    for (i = 0; i < MH_PLACE_EVENT_COUNT; ++i) {
+        if (impl->event_sprites[i].texture) {
+            renderer_destroy_texture(impl->controller->renderer, impl->event_sprites[i].texture);
+            impl->event_sprites[i].texture = NULL;
+        }
+        impl->event_sprites[i].width = 0;
+        impl->event_sprites[i].height = 0;
+    }
+
+    for (i = 0; i < impl->place.event_count; ++i) {
+        const mh_place_event *event = &impl->place.events[i];
+        char path[64];
+        mh_buffer data;
+        mh_anim_image anim;
+        const mh_anim_frame *frame = NULL;
+        int sprite_index = (int)i;
+
+        if (event->id_image == 0u) {
+            continue;
+        }
+
+        snprintf(path, sizeof(path), "eventobj/obj_%u.arc", (unsigned)event->id_image);
+        mh_buffer_init(&data);
+        if (mh_datafiles_get_data(&impl->state->datafiles, path, &data) != 0) {
+            continue;
+        }
+
+        memset(&anim, 0, sizeof(anim));
+        if (mh_anim_decode_arc(data.data, data.len, &anim) == 0) {
+            frame = mh_anim_get_frame_by_animation_name(&anim, "gfx");
+            if (!frame) {
+                frame = mh_anim_get_frame_by_animation_name(&anim, "default");
+            }
+            if (!frame && anim.frame_count > 0u) {
+                frame = &anim.frames[0];
+            }
+            if (frame) {
+                impl->event_sprites[sprite_index].texture = renderer_create_texture_from_rgba(impl->controller->renderer,
+                                                                                              frame->pixels,
+                                                                                              frame->width,
+                                                                                              frame->height);
+                impl->event_sprites[sprite_index].width = frame->width;
+                impl->event_sprites[sprite_index].height = frame->height;
+            }
+            mh_anim_free(&anim);
+        }
+        mh_buffer_free(&data);
+    }
+}
+
 static void mode_room_load_title_text(mode_room_impl *impl) {
     char pack_path[64];
     char entry_name[32];
@@ -571,6 +643,7 @@ static bool mode_room_load_current(mode_room_impl *impl) {
     bg_loader_load(impl->state, impl->controller, bg_main_path, screen_controller_set_bg_main);
     bg_loader_load(impl->state, impl->controller, bg_map_path, screen_controller_set_bg_sub);
     mode_room_load_bg_animations(impl);
+    mode_room_load_event_sprites(impl);
     mode_room_load_title_text(impl);
     return true;
 }
@@ -667,6 +740,25 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
                     return true;
                 }
                 impl->camera_button.pressed = false;
+
+                x = (float)event->data.mouse_button.x;
+                y = (float)event->data.mouse_button.y - (float)WB_SCREEN_HEIGHT;
+                exit_index = mode_room_find_event_index_at_point(impl, x, y);
+                if (exit_index >= 0) {
+                    const mh_place_event *event_obj = &impl->place.events[exit_index];
+                    if (event_obj->id_event != 0u) {
+                        fprintf(stderr,
+                                "widebrim: event hotspot %d triggered scripted event (id=%u); "
+                                "switching to DramaEvent\n",
+                                exit_index, (unsigned)event_obj->id_event);
+                        game_state_set_event_id(impl->state, event_obj->id_event);
+                        game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
+                        game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
+                        impl->done = true;
+                        return true;
+                    }
+                }
+
                 return false;
             }
         case WB_INPUT_EVENT_MOUSE_BUTTON_UP:
@@ -805,6 +897,25 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         renderer_draw_texture(impl->controller->renderer, frame_texture, &rect);
     }
 
+    for (i = 0; i < impl->place.event_count; ++i) {
+        const mh_place_event *event = &impl->place.events[i];
+        renderer_texture *sprite = NULL;
+        wb_rect rect;
+
+        if (event->id_image == 0u || i >= MH_PLACE_EVENT_COUNT) {
+            continue;
+        }
+        sprite = impl->event_sprites[i].texture;
+        if (!sprite) {
+            continue;
+        }
+        rect.x = (float)event->bounding.x;
+        rect.y = (float)(event->bounding.y + (int)WB_SCREEN_HEIGHT);
+        rect.w = (float)event->bounding.width;
+        rect.h = (float)event->bounding.height;
+        renderer_draw_texture(impl->controller->renderer, sprite, &rect);
+    }
+
     if (impl->in_move_mode) {
         if (impl->highlighted_exit_index >= 0) {
             const mh_place_exit *exit = &impl->place.exits[impl->highlighted_exit_index];
@@ -927,6 +1038,11 @@ static void mode_room_destroy(void *implp) {
     int i;
 
     mode_room_destroy_bg_animations(impl);
+    for (i = 0; i < MH_PLACE_EVENT_COUNT; ++i) {
+        if (impl->event_sprites[i].texture) {
+            renderer_destroy_texture(impl->controller->renderer, impl->event_sprites[i].texture);
+        }
+    }
     for (i = 0; i < MODE_ROOM_EXIT_IMAGE_COUNT; ++i) {
         if (impl->exit_sprites[i].texture) {
             renderer_destroy_texture(impl->controller->renderer, impl->exit_sprites[i].texture);
@@ -1000,6 +1116,7 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->highlighted_exit_index = -1;
     impl->bg_animation_count = 0u;
     memset(impl->bg_animations, 0, sizeof(impl->bg_animations));
+    memset(impl->event_sprites, 0, sizeof(impl->event_sprites));
     impl->title.texture = NULL;
     impl->title.width = 0;
     impl->title.height = 0;
