@@ -46,6 +46,17 @@ typedef struct {
     bool pending_mode;
 } mode_room_icon_state;
 
+typedef struct {
+    SDL_Texture *texture;
+    SDL_Texture *highlighted_texture;
+} mode_room_exit_sprite_state;
+
+typedef struct {
+    SDL_Texture *texture;
+    int width;
+    int height;
+} mode_room_title_state;
+
 // simplified roomplayer, shows room's top/bottom background and lets the player
 // click through rooms. NPCs, party members, tea events, photo pieces and 
 // tobj popups are all deferred as they need event scripting
@@ -61,11 +72,8 @@ typedef struct {
     mode_room_icon_state menu_button;
     mode_room_icon_state camera_button;
     int highlighted_exit_index;
-    SDL_Texture *exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
-    SDL_Texture *exit_sprites_highlighted[MODE_ROOM_EXIT_IMAGE_COUNT];
-    SDL_Texture *title_texture;
-    int title_width;
-    int title_height;
+    mode_room_exit_sprite_state exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
+    mode_room_title_state title;
 } mode_room_impl;
 
 static void mode_room_load_exit_sprites(mode_room_impl *impl) {
@@ -86,14 +94,14 @@ static void mode_room_load_exit_sprites(mode_room_impl *impl) {
             const mh_anim_frame *frame = mh_anim_get_frame_by_animation_name(&anim, "gfx");
             const mh_anim_frame *highlight_frame = mh_anim_get_frame_by_animation_name(&anim, "gfx2");
             if (frame) {
-                impl->exit_sprites[i] = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
+                impl->exit_sprites[i].texture = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
             }
             if (highlight_frame) {
-                impl->exit_sprites_highlighted[i] = texture_from_rgba(renderer, highlight_frame->pixels,
-                                                                       highlight_frame->width,
-                                                                       highlight_frame->height);
+                impl->exit_sprites[i].highlighted_texture = texture_from_rgba(renderer, highlight_frame->pixels,
+                                                                             highlight_frame->width,
+                                                                             highlight_frame->height);
             } else if (frame) {
-                impl->exit_sprites_highlighted[i] = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
+                impl->exit_sprites[i].highlighted_texture = texture_from_rgba(renderer, frame->pixels, frame->width, frame->height);
             }
             mh_anim_free(&anim);
         }
@@ -266,10 +274,12 @@ static void mode_room_load_title_text(mode_room_impl *impl) {
     uint8_t *pixels;
     int w, h;
 
-    if (impl->title_texture) {
-        SDL_DestroyTexture(impl->title_texture);
-        impl->title_texture = NULL;
+    if (impl->title.texture) {
+        SDL_DestroyTexture(impl->title.texture);
+        impl->title.texture = NULL;
     }
+    impl->title.width = 0;
+    impl->title.height = 0;
     if (!impl->state->font_event_loaded) {
         return;
     }
@@ -292,9 +302,9 @@ static void mode_room_load_title_text(mode_room_impl *impl) {
     mh_buffer_free(&text_data);
 
     if (mh_font_render_string(&impl->state->font_event, text_cstr, &pixels, &w, &h) == 0) {
-        impl->title_texture = texture_from_rgba(impl->controller->bg->renderer, pixels, w, h);
-        impl->title_width = w;
-        impl->title_height = h;
+        impl->title.texture = texture_from_rgba(impl->controller->bg->renderer, pixels, w, h);
+        impl->title.width = w;
+        impl->title.height = h;
         free(pixels);
     }
     free(text_cstr);
@@ -527,11 +537,12 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
             const mh_place_exit *exit = &impl->place.exits[i];
             SDL_Texture *sprite = NULL;
             if (exit->id_image < MODE_ROOM_EXIT_IMAGE_COUNT) {
+                mode_room_exit_sprite_state *exit_sprite = &impl->exit_sprites[exit->id_image];
                 if ((int)i == impl->highlighted_exit_index) {
-                    sprite = impl->exit_sprites_highlighted[exit->id_image] ? impl->exit_sprites_highlighted[exit->id_image]
-                                                                          : impl->exit_sprites[exit->id_image];
+                    sprite = exit_sprite->highlighted_texture ? exit_sprite->highlighted_texture
+                                                            : exit_sprite->texture;
                 } else {
-                    sprite = impl->exit_sprites[exit->id_image];
+                    sprite = exit_sprite->texture;
                 }
             }
             SDL_FRect rect;
@@ -610,13 +621,13 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
 
     }
 
-    if (impl->title_texture) {
+    if (impl->title.texture) {
         SDL_FRect rect;
-        rect.x = (float)(MODE_ROOM_TITLE_CENTER_X - impl->title_width / 2);
+        rect.x = (float)(MODE_ROOM_TITLE_CENTER_X - impl->title.width / 2);
         rect.y = (float)MODE_ROOM_TITLE_Y;
-        rect.w = (float)impl->title_width;
-        rect.h = (float)impl->title_height;
-        SDL_RenderTexture(renderer, impl->title_texture, NULL, &rect);
+        rect.w = (float)impl->title.width;
+        rect.h = (float)impl->title.height;
+        SDL_RenderTexture(renderer, impl->title.texture, NULL, &rect);
     }
 }
 
@@ -629,11 +640,11 @@ static void mode_room_destroy(void *implp) {
     int i;
 
     for (i = 0; i < MODE_ROOM_EXIT_IMAGE_COUNT; ++i) {
-        if (impl->exit_sprites[i]) {
-            SDL_DestroyTexture(impl->exit_sprites[i]);
+        if (impl->exit_sprites[i].texture) {
+            SDL_DestroyTexture(impl->exit_sprites[i].texture);
         }
-        if (impl->exit_sprites_highlighted[i]) {
-            SDL_DestroyTexture(impl->exit_sprites_highlighted[i]);
+        if (impl->exit_sprites[i].highlighted_texture) {
+            SDL_DestroyTexture(impl->exit_sprites[i].highlighted_texture);
         }
     }
     if (impl->move_button.texture) {
@@ -663,8 +674,8 @@ static void mode_room_destroy(void *implp) {
     if (impl->camera_button.texture_click) {
         SDL_DestroyTexture(impl->camera_button.texture_click);
     }
-    if (impl->title_texture) {
-        SDL_DestroyTexture(impl->title_texture);
+    if (impl->title.texture) {
+        SDL_DestroyTexture(impl->title.texture);
     }
     free(impl);
 }
@@ -698,12 +709,11 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->camera_button.texture_on = NULL;
     impl->camera_button.texture_click = NULL;
     impl->highlighted_exit_index = -1;
-    impl->title_texture = NULL;
-    impl->title_width = 0;
-    impl->title_height = 0;
+    impl->title.texture = NULL;
+    impl->title.width = 0;
+    impl->title.height = 0;
     memset(&impl->place, 0, sizeof(impl->place));
     memset(impl->exit_sprites, 0, sizeof(impl->exit_sprites));
-    memset(impl->exit_sprites_highlighted, 0, sizeof(impl->exit_sprites_highlighted));
 
     mode_room_load_exit_sprites(impl);
     impl->move_button.texture = mode_room_load_button_texture(state, controller->bg->renderer,
