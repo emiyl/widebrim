@@ -16,15 +16,15 @@ typedef struct {
     input *input;
     game_state state;
     mode_spawner spawner;
-    widebrim_clock clock;
+    wb_clock clock;
     bool running;
     bool speed_modifier;
     bool alpha_blend_enabled;
     Uint32 engine_skip_clock_event_type;
-} widebrim_runtime;
+} wb_runtime;
 
-int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, const char *language);
-void widebrim_runtime_destroy(widebrim_runtime *rt);
-void widebrim_runtime_run(widebrim_runtime *rt);
+int wb_runtime_init(wb_runtime *rt, const char *datafiles_root, const char *language);
+void wb_runtime_destroy(wb_runtime *rt);
+void wb_runtime_run(wb_runtime *rt);
 
 #endif

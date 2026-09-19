@@ -5,10 +5,10 @@
 
 typedef struct {
     uint64_t prev_frame_counter;
-} widebrim_clock;
+} wb_clock;
 
-void widebrim_clock_init(widebrim_clock *clock);
+void wb_clock_init(wb_clock *clock);
 
-double widebrim_clock_tick(widebrim_clock *clock, double target_interval_sec);
+double wb_clock_tick(wb_clock *clock, double target_interval_sec);
 
 #endif

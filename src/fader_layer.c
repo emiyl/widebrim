@@ -103,7 +103,7 @@ static void fader_layer_update_impl(void *impl, float dt_ms) {
 }
 
 static void fader_layer_draw_rect(renderer *renderer_instance, const fader_timeline *tl, int y_offset) {
-    SDL_FRect rect;
+    wb_rect rect;
     uint8_t alpha;
 
     if (tl->alpha <= 0.0f) {
@@ -113,10 +113,10 @@ static void fader_layer_draw_rect(renderer *renderer_instance, const fader_timel
     alpha = tl->alpha >= 255.0f ? 255 : (uint8_t)tl->alpha;
     rect.x = 0.0f;
     rect.y = (float)y_offset;
-    rect.w = (float)WIDEBRIM_SCREEN_WIDTH;
-    rect.h = (float)WIDEBRIM_SCREEN_HEIGHT;
+    rect.w = (float)WB_SCREEN_WIDTH;
+    rect.h = (float)WB_SCREEN_HEIGHT;
 
-    renderer_set_blend_mode(renderer_instance, WIDEBRIM_BLEND_MODE_BLEND);
+    renderer_set_blend_mode(renderer_instance, WB_BLEND_MODE_BLEND);
     if (tl->flash_white) {
         renderer_fill_rect(renderer_instance, &rect, 255, 255, 255, alpha);
     } else {
@@ -127,13 +127,13 @@ static void fader_layer_draw_rect(renderer *renderer_instance, const fader_timel
 static void fader_layer_draw_impl(void *impl, renderer *renderer_instance) {
     fader_layer *fader = (fader_layer *)impl;
     fader_layer_draw_rect(renderer_instance, &fader->sub_fade, 0);
-    fader_layer_draw_rect(renderer_instance, &fader->main_fade, WIDEBRIM_SCREEN_HEIGHT);
+    fader_layer_draw_rect(renderer_instance, &fader->main_fade, WB_SCREEN_HEIGHT);
 }
 
-static bool fader_layer_handle_touch_impl(void *impl, const SDL_Event *event) {
+static bool fader_layer_handle_touch_impl(void *impl, const wb_input_event *event) {
     fader_layer *fader = (fader_layer *)impl;
     if (fader->wait_remaining_ms > 0.0f && fader->wait_can_be_skipped &&
-        event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        event && event->type == WB_INPUT_EVENT_MOUSE_BUTTON_DOWN) {
         fader->wait_remaining_ms = 0.0f;
         return true;
     }

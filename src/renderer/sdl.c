@@ -1,5 +1,7 @@
 #include "../renderer.h"
 
+#include <SDL3/SDL.h>
+
 #include <stdlib.h>
 
 typedef struct sdl_renderer_impl {
@@ -14,11 +16,11 @@ struct renderer_texture {
     SDL_Texture *texture;
 };
 
-static SDL_BlendMode sdl_blend_mode_from_widebrim(widebrim_blend_mode mode) {
+static SDL_BlendMode sdl_blend_mode_from_widebrim(wb_blend_mode mode) {
     switch (mode) {
-        case WIDEBRIM_BLEND_MODE_NONE:
+        case WB_BLEND_MODE_NONE:
             return SDL_BLENDMODE_NONE;
-        case WIDEBRIM_BLEND_MODE_BLEND:
+        case WB_BLEND_MODE_BLEND:
             return SDL_BLENDMODE_BLEND;
         default:
             return SDL_BLENDMODE_BLEND;
@@ -87,40 +89,58 @@ static renderer_texture *sdl_renderer_create_texture_from_rgba(renderer *rendere
     return texture;
 }
 
-static void sdl_renderer_draw_texture(renderer *renderer_instance, const renderer_texture *texture, const SDL_FRect *dst) {
+static void sdl_renderer_draw_texture(renderer *renderer_instance, const renderer_texture *texture, const wb_rect *dst) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
+    SDL_FRect sdl_dst;
+
     if (!texture || !texture->texture || !dst) {
         return;
     }
-    SDL_RenderTexture(impl->renderer, texture->texture, NULL, dst);
+    sdl_dst.x = dst->x;
+    sdl_dst.y = dst->y;
+    sdl_dst.w = dst->w;
+    sdl_dst.h = dst->h;
+    SDL_RenderTexture(impl->renderer, texture->texture, NULL, &sdl_dst);
 }
 
-static void sdl_renderer_draw_rect(renderer *renderer_instance, const SDL_FRect *rect,
+static void sdl_renderer_draw_rect(renderer *renderer_instance, const wb_rect *rect,
                                   uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
+    SDL_FRect sdl_rect;
+
     if (!rect) {
         return;
     }
+    sdl_rect.x = rect->x;
+    sdl_rect.y = rect->y;
+    sdl_rect.w = rect->w;
+    sdl_rect.h = rect->h;
     SDL_SetRenderDrawColor(impl->renderer, r, g, b, a);
-    SDL_RenderRect(impl->renderer, rect);
+    SDL_RenderRect(impl->renderer, &sdl_rect);
 }
 
-static void sdl_renderer_fill_rect(renderer *renderer_instance, const SDL_FRect *rect,
+static void sdl_renderer_fill_rect(renderer *renderer_instance, const wb_rect *rect,
                                    uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
+    SDL_FRect sdl_rect;
+
     if (!rect) {
         return;
     }
+    sdl_rect.x = rect->x;
+    sdl_rect.y = rect->y;
+    sdl_rect.w = rect->w;
+    sdl_rect.h = rect->h;
     SDL_SetRenderDrawColor(impl->renderer, r, g, b, a);
-    SDL_RenderFillRect(impl->renderer, rect);
+    SDL_RenderFillRect(impl->renderer, &sdl_rect);
 }
 
-static void sdl_renderer_set_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
+static void sdl_renderer_set_blend_mode(renderer *renderer_instance, wb_blend_mode mode) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
     SDL_SetRenderDrawBlendMode(impl->renderer, sdl_blend_mode_from_widebrim(mode));
 }
 
-static void sdl_renderer_set_global_texture_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
+static void sdl_renderer_set_global_texture_blend_mode(renderer *renderer_instance, wb_blend_mode mode) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
     size_t i;
 
@@ -195,7 +215,7 @@ static const renderer_vtable g_sdl_renderer_vtable = {
     .destroy = sdl_renderer_destroy,
 };
 
-renderer *renderer_create_sdl(SDL_Renderer *sdl_renderer) {
+renderer *renderer_create_sdl(void *sdl_renderer) {
     renderer *renderer_instance = (renderer *)calloc(1u, sizeof(*renderer_instance));
     sdl_renderer_impl *impl = (sdl_renderer_impl *)calloc(1u, sizeof(*impl));
 

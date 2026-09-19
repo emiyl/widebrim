@@ -8,8 +8,8 @@
 #include "renderer.h"
 #include "screen.h"
 
-#define WIDEBRIM_SCREEN_WIDTH 256
-#define WIDEBRIM_SCREEN_HEIGHT 192
+#define WB_SCREEN_WIDTH 256
+#define WB_SCREEN_HEIGHT 192
 
 typedef struct {
     renderer *renderer;

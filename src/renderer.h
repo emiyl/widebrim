@@ -1,26 +1,32 @@
 #ifndef WIDEBRIM_RENDERER_H
 #define WIDEBRIM_RENDERER_H
 
+#include <stddef.h>
 #include <stdint.h>
 
-#include <SDL3/SDL.h>
+typedef struct {
+    float x;
+    float y;
+    float w;
+    float h;
+} wb_rect;
 
 typedef struct renderer_texture renderer_texture;
 typedef struct renderer renderer;
 
 typedef enum {
-    WIDEBRIM_BLEND_MODE_NONE = 0,
-    WIDEBRIM_BLEND_MODE_BLEND = 1,
-} widebrim_blend_mode;
+    WB_BLEND_MODE_NONE = 0,
+    WB_BLEND_MODE_BLEND = 1,
+} wb_blend_mode;
 
 typedef struct renderer_vtable {
     void (*destroy_texture)(renderer *renderer, renderer_texture *texture);
     renderer_texture *(*create_texture_from_rgba)(renderer *renderer, const uint8_t *rgba, int width, int height);
-    void (*draw_texture)(renderer *renderer, const renderer_texture *texture, const SDL_FRect *dst);
-    void (*draw_rect)(renderer *renderer, const SDL_FRect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-    void (*fill_rect)(renderer *renderer, const SDL_FRect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-    void (*set_blend_mode)(renderer *renderer, widebrim_blend_mode mode);
-    void (*set_global_texture_blend_mode)(renderer *renderer, widebrim_blend_mode mode);
+    void (*draw_texture)(renderer *renderer, const renderer_texture *texture, const wb_rect *dst);
+    void (*draw_rect)(renderer *renderer, const wb_rect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+    void (*fill_rect)(renderer *renderer, const wb_rect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+    void (*set_blend_mode)(renderer *renderer, wb_blend_mode mode);
+    void (*set_global_texture_blend_mode)(renderer *renderer, wb_blend_mode mode);
     void (*clear)(renderer *renderer, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
     void (*present)(renderer *renderer);
     void (*get_texture_size)(renderer *renderer, const renderer_texture *texture, int *w, int *h);
@@ -32,7 +38,7 @@ struct renderer {
     const renderer_vtable *vt;
 };
 
-renderer *renderer_create_sdl(SDL_Renderer *sdl_renderer);
+renderer *renderer_create_sdl(void *sdl_renderer);
 
 static inline void renderer_destroy(renderer *renderer_instance) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->destroy) {
@@ -40,13 +46,13 @@ static inline void renderer_destroy(renderer *renderer_instance) {
     }
 }
 
-static inline void renderer_set_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
+static inline void renderer_set_blend_mode(renderer *renderer_instance, wb_blend_mode mode) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->set_blend_mode) {
         renderer_instance->vt->set_blend_mode(renderer_instance, mode);
     }
 }
 
-static inline void renderer_set_global_texture_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
+static inline void renderer_set_global_texture_blend_mode(renderer *renderer_instance, wb_blend_mode mode) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->set_global_texture_blend_mode) {
         renderer_instance->vt->set_global_texture_blend_mode(renderer_instance, mode);
     }
@@ -81,20 +87,20 @@ static inline renderer_texture *renderer_create_texture_from_rgba(renderer *rend
 }
 
 static inline void renderer_draw_texture(renderer *renderer_instance, const renderer_texture *texture,
-                                        const SDL_FRect *dst) {
+                                        const wb_rect *dst) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->draw_texture && texture) {
         renderer_instance->vt->draw_texture(renderer_instance, texture, dst);
     }
 }
 
-static inline void renderer_draw_rect(renderer *renderer_instance, const SDL_FRect *rect,
+static inline void renderer_draw_rect(renderer *renderer_instance, const wb_rect *rect,
                                      uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->draw_rect) {
         renderer_instance->vt->draw_rect(renderer_instance, rect, r, g, b, a);
     }
 }
 
-static inline void renderer_fill_rect(renderer *renderer_instance, const SDL_FRect *rect,
+static inline void renderer_fill_rect(renderer *renderer_instance, const wb_rect *rect,
                                       uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->fill_rect) {
         renderer_instance->vt->fill_rect(renderer_instance, rect, r, g, b, a);

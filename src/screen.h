@@ -4,16 +4,15 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <SDL3/SDL.h>
-
+#include "input.h"
 #include "renderer.h"
 
 typedef struct {
     void *impl;
     void (*update)(void *impl, float dt_ms);
     void (*draw)(void *impl, renderer *renderer_instance);
-    bool (*handle_key)(void *impl, const SDL_Event *event);
-    bool (*handle_touch)(void *impl, const SDL_Event *event);
+    bool (*handle_key)(void *impl, const wb_input_event *event);
+    bool (*handle_touch)(void *impl, const wb_input_event *event);
     void (*on_quit)(void *impl);
     void (*destroy)(void *impl);
 } screen_layer;
@@ -40,8 +39,8 @@ screen_layer screen_collection_remove_at(screen_collection *sc, size_t index);
 
 void screen_collection_update(screen_collection *sc, float dt_ms);
 void screen_collection_draw(screen_collection *sc, renderer *renderer_instance);
-bool screen_collection_handle_key(screen_collection *sc, const SDL_Event *event);
-bool screen_collection_handle_touch(screen_collection *sc, const SDL_Event *event);
+bool screen_collection_handle_key(screen_collection *sc, const wb_input_event *event);
+bool screen_collection_handle_touch(screen_collection *sc, const wb_input_event *event);
 void screen_collection_on_quit(screen_collection *sc);
 
 #endif

@@ -202,9 +202,9 @@ static void mode_drama_event_update(void *implp, float dt_ms) {
     }
 }
 
-static bool mode_drama_event_handle_key(void *impl, const SDL_Event *event) {
+static bool mode_drama_event_handle_key(void *impl, const wb_input_event *event) {
     mode_drama_event_impl *drama = (mode_drama_event_impl *)impl;
-    if (event->type == SDL_EVENT_KEY_DOWN) {
+    if (event && event->type == WB_INPUT_EVENT_KEY_DOWN) {
         if (drama->waiting_for_input) {
             drama->waiting_for_input = false;
             mode_drama_event_step(drama);
@@ -218,9 +218,9 @@ static bool mode_drama_event_handle_key(void *impl, const SDL_Event *event) {
     return false;
 }
 
-static bool mode_drama_event_handle_touch(void *impl, const SDL_Event *event) {
+static bool mode_drama_event_handle_touch(void *impl, const wb_input_event *event) {
     mode_drama_event_impl *drama = (mode_drama_event_impl *)impl;
-    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+    if (event && event->type == WB_INPUT_EVENT_MOUSE_BUTTON_DOWN) {
         if (drama->waiting_for_input) {
             drama->waiting_for_input = false;
             mode_drama_event_step(drama);

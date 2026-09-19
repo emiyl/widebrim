@@ -68,7 +68,7 @@ void screen_collection_draw(screen_collection *sc, renderer *renderer_instance) 
     }
 }
 
-bool screen_collection_handle_key(screen_collection *sc, const SDL_Event *event) {
+bool screen_collection_handle_key(screen_collection *sc, const wb_input_event *event) {
     size_t i = sc->count;
     while (i-- > 0) {
         if (sc->layers[i].handle_key && sc->layers[i].handle_key(sc->layers[i].impl, event)) {
@@ -78,7 +78,7 @@ bool screen_collection_handle_key(screen_collection *sc, const SDL_Event *event)
     return false;
 }
 
-bool screen_collection_handle_touch(screen_collection *sc, const SDL_Event *event) {
+bool screen_collection_handle_touch(screen_collection *sc, const wb_input_event *event) {
     size_t i = sc->count;
     while (i-- > 0) {
         if (sc->layers[i].handle_touch && sc->layers[i].handle_touch(sc->layers[i].impl, event)) {

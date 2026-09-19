@@ -3,11 +3,10 @@
 
 #include <stdbool.h>
 
-#include <SDL3/SDL.h>
-
 #include "bg_layer.h"
 #include "fader_layer.h"
 #include "game_state.h"
+#include "input.h"
 #include "mode.h"
 #include "renderer.h"
 #include "screen.h"
@@ -29,13 +28,13 @@ typedef struct {
     bool should_quit;
 } mode_spawner;
 
-void mode_spawner_init(mode_spawner *ms, game_state *state, SDL_Renderer *renderer);
+void mode_spawner_init(mode_spawner *ms, game_state *state, renderer *renderer_instance);
 void mode_spawner_destroy(mode_spawner *ms);
 
 void mode_spawner_update(mode_spawner *ms, float dt_ms);
 void mode_spawner_draw(mode_spawner *ms, renderer *renderer_instance);
-bool mode_spawner_handle_key(mode_spawner *ms, const SDL_Event *event);
-bool mode_spawner_handle_touch(mode_spawner *ms, const SDL_Event *event);
+bool mode_spawner_handle_key(mode_spawner *ms, const wb_input_event *event);
+bool mode_spawner_handle_touch(mode_spawner *ms, const wb_input_event *event);
 void mode_spawner_on_quit(mode_spawner *ms);
 
 #endif

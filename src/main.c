@@ -10,7 +10,7 @@ static void print_usage(const char *argv0) {
 int main(int argc, char **argv) {
     const char *data_root = NULL;
     const char *language = "en";
-    widebrim_runtime runtime;
+    wb_runtime runtime;
     int i;
 
     for (i = 1; i < argc; ++i) {
@@ -30,18 +30,15 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (widebrim_runtime_init(&runtime, data_root, language) != 0) {
+    if (wb_runtime_init(&runtime, data_root, language) != 0) {
         return 1;
     }
 
-    widebrim_runtime_run(&runtime);
+    wb_runtime_run(&runtime);
 
-    /* Matches launcher.py's crash reporter (mode/place snapshot), printed
-     * unconditionally here on the normal quit path since there is no
-     * exception mechanism in C to hook a crash handler onto. */
     fprintf(stderr, "widebrim: exiting (mode=%d, place_num=%d)\n",
             (int)game_state_get_mode(&runtime.state), game_state_get_place_num(&runtime.state));
 
-    widebrim_runtime_destroy(&runtime);
+    wb_runtime_destroy(&runtime);
     return 0;
 }

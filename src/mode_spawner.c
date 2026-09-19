@@ -88,7 +88,7 @@ static void mode_spawner_ready_switch(mode_spawner *ms, game_mode target) {
     }
 }
 
-void mode_spawner_init(mode_spawner *ms, game_state *state, SDL_Renderer *renderer) {
+void mode_spawner_init(mode_spawner *ms, game_state *state, renderer *renderer_instance) {
     ms->state = state;
     ms->has_active_mode = false;
     ms->current_active_mode = GAME_MODE_INVALID;
@@ -96,7 +96,7 @@ void mode_spawner_init(mode_spawner *ms, game_state *state, SDL_Renderer *render
     ms->switch_pending = false;
     ms->should_quit = false;
 
-    ms->controller.renderer = renderer_create_sdl(renderer);
+    ms->controller.renderer = renderer_instance;
     ms->controller.bg = &ms->bg;
     ms->controller.fader = &ms->fader;
     bg_layer_init(&ms->bg, ms->controller.renderer);
@@ -143,11 +143,11 @@ void mode_spawner_draw(mode_spawner *ms, renderer *renderer_instance) {
     screen_collection_draw(&ms->layers, renderer_instance);
 }
 
-bool mode_spawner_handle_key(mode_spawner *ms, const SDL_Event *event) {
+bool mode_spawner_handle_key(mode_spawner *ms, const wb_input_event *event) {
     return screen_collection_handle_key(&ms->layers, event);
 }
 
-bool mode_spawner_handle_touch(mode_spawner *ms, const SDL_Event *event) {
+bool mode_spawner_handle_touch(mode_spawner *ms, const wb_input_event *event) {
     return screen_collection_handle_touch(&ms->layers, event);
 }
 

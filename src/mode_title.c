@@ -30,15 +30,15 @@ static bool mode_title_advance(mode_title_impl *impl) {
     return true;
 }
 
-static bool mode_title_handle_key(void *impl, const SDL_Event *event) {
-    if (event->type == SDL_EVENT_KEY_DOWN) {
+static bool mode_title_handle_key(void *impl, const wb_input_event *event) {
+    if (event && event->type == WB_INPUT_EVENT_KEY_DOWN) {
         return mode_title_advance((mode_title_impl *)impl);
     }
     return false;
 }
 
-static bool mode_title_handle_touch(void *impl, const SDL_Event *event) {
-    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+static bool mode_title_handle_touch(void *impl, const wb_input_event *event) {
+    if (event && event->type == WB_INPUT_EVENT_MOUSE_BUTTON_DOWN) {
         return mode_title_advance((mode_title_impl *)impl);
     }
     return false;

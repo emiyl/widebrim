@@ -151,7 +151,7 @@ static void mode_room_get_button_size(renderer *renderer_instance, renderer_text
 }
 
 static void mode_room_set_button_draw_rect(renderer *renderer_instance, renderer_texture *texture,
-                                          int x, int y, int fallback_w, int fallback_h, SDL_FRect *dst) {
+                                          int x, int y, int fallback_w, int fallback_h, wb_rect *dst) {
     int w;
     int h;
 
@@ -208,7 +208,7 @@ static bool mode_room_toggle_rect_contains_point(mode_room_impl *impl, float x, 
     int h;
     int rect_x;
     int rect_y;
-    float room_y = y - (float)WIDEBRIM_SCREEN_HEIGHT;
+    float room_y = y - (float)WB_SCREEN_HEIGHT;
 
     mode_room_get_button_size(impl->controller->renderer, impl->move_button.texture,
                               MODE_ROOM_MOVE_TOGGLE_FALLBACK_W, MODE_ROOM_MOVE_TOGGLE_FALLBACK_H, &w, &h);
@@ -226,7 +226,7 @@ static bool mode_room_menu_rect_contains_point(mode_room_impl *impl, float x, fl
     int h;
     int rect_x;
     int rect_y;
-    float room_y = y - (float)WIDEBRIM_SCREEN_HEIGHT;
+    float room_y = y - (float)WB_SCREEN_HEIGHT;
 
     mode_room_get_button_size(impl->controller->renderer, impl->menu_button.texture,
                               MODE_ROOM_MENU_TOGGLE_FALLBACK_W, MODE_ROOM_MENU_TOGGLE_FALLBACK_H, &w, &h);
@@ -244,7 +244,7 @@ static bool mode_room_camera_rect_contains_point(mode_room_impl *impl, float x, 
     int h;
     int rect_x;
     int rect_y;
-    float room_y = y - (float)WIDEBRIM_SCREEN_HEIGHT;
+    float room_y = y - (float)WB_SCREEN_HEIGHT;
 
     mode_room_get_button_size(impl->controller->renderer, impl->camera_button.texture,
                               MODE_ROOM_CAMERA_TOGGLE_FALLBACK_W, MODE_ROOM_CAMERA_TOGGLE_FALLBACK_H, &w, &h);
@@ -262,10 +262,10 @@ static void mode_room_set_move_mode(mode_room_impl *impl, bool enabled) {
     impl->highlighted_exit_index = -1;
 }
 
-static bool mode_room_handle_key(void *implp, const SDL_Event *event) {
+static bool mode_room_handle_key(void *implp, const wb_input_event *event) {
     mode_room_impl *impl = (mode_room_impl *)implp;
 
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_M) {
+    if (event && event->type == WIDEBRIM_INPUT_EVENT_KEY_DOWN && event->data.key.key == WIDEBRIM_KEY_M) {
         mode_room_set_move_mode(impl, !impl->in_move_mode);
         return true;
     }
@@ -356,16 +356,20 @@ static void mode_room_on_transition_fade_done(void *user) {
     screen_controller_fade_in(impl->controller, FADER_DEFAULT_DURATION_MS, NULL, NULL);
 }
 
-static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
+static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
     mode_room_impl *impl = (mode_room_impl *)implp;
     float x, y;
     int exit_index;
 
+    if (!event) {
+        return false;
+    }
+
     switch (event->type) {
-        case SDL_EVENT_MOUSE_MOTION:
+        case WB_INPUT_EVENT_MOUSE_MOTION:
             if (impl->in_move_mode) {
-                x = event->motion.x;
-                y = event->motion.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+                x = (float)event->data.mouse_motion.x;
+                y = (float)event->data.mouse_motion.y - (float)WB_SCREEN_HEIGHT;
                 exit_index = mode_room_find_exit_index_at_point(impl, x, y);
                 if (exit_index != impl->highlighted_exit_index) {
                     impl->highlighted_exit_index = exit_index;
@@ -375,9 +379,12 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
             }
 
             {
-                bool move_hovered = mode_room_toggle_rect_contains_point(impl, event->motion.x, event->motion.y);
-                bool menu_hovered = mode_room_menu_rect_contains_point(impl, event->motion.x, event->motion.y);
-                bool camera_hovered = mode_room_camera_rect_contains_point(impl, event->motion.x, event->motion.y);
+                bool move_hovered = mode_room_toggle_rect_contains_point(impl, event->data.mouse_motion.x,
+                                                                        event->data.mouse_motion.y);
+                bool menu_hovered = mode_room_menu_rect_contains_point(impl, event->data.mouse_motion.x,
+                                                                        event->data.mouse_motion.y);
+                bool camera_hovered = mode_room_camera_rect_contains_point(impl, event->data.mouse_motion.x,
+                                                                          event->data.mouse_motion.y);
 
                 impl->move_button.hovered = move_hovered;
                 impl->menu_button.hovered = menu_hovered;
@@ -390,10 +397,10 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
                 }
                 return false;
             }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case WB_INPUT_EVENT_MOUSE_BUTTON_DOWN:
             if (impl->in_move_mode) {
-                x = event->button.x;
-                y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+                x = (float)event->data.mouse_button.x;
+                y = (float)event->data.mouse_button.y - (float)WB_SCREEN_HEIGHT;
                 exit_index = mode_room_find_exit_index_at_point(impl, x, y);
                 if (exit_index >= 0) {
                     const mh_place_exit *exit = &impl->place.exits[exit_index];
@@ -419,9 +426,12 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
             }
 
             {
-                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
-                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
-                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
+                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->data.mouse_button.x,
+                                                                   event->data.mouse_button.y);
+                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->data.mouse_button.x,
+                                                                      event->data.mouse_button.y);
+                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->data.mouse_button.x,
+                                                                    event->data.mouse_button.y);
 
                 impl->move_button.release_frames = 0;
                 impl->menu_button.release_frames = 0;
@@ -448,15 +458,18 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
                 impl->camera_button.pressed = false;
                 return false;
             }
-        case SDL_EVENT_MOUSE_BUTTON_UP:
+        case WB_INPUT_EVENT_MOUSE_BUTTON_UP:
             if (impl->in_move_mode) {
                 return false;
             }
 
             {
-                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
-                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
-                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
+                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->data.mouse_button.x,
+                                                                   event->data.mouse_button.y);
+                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->data.mouse_button.x,
+                                                                      event->data.mouse_button.y);
+                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->data.mouse_button.x,
+                                                                    event->data.mouse_button.y);
 
                 if (impl->move_button.pressed || move_hit) {
                     impl->move_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
@@ -501,11 +514,11 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
     mode_room_impl *impl = (mode_room_impl *)implp;
     size_t i;
 
-    renderer_set_blend_mode(renderer_instance, WIDEBRIM_BLEND_MODE_BLEND);
+    renderer_set_blend_mode(renderer_instance, WB_BLEND_MODE_BLEND);
 
-    SDL_FRect move_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
-    SDL_FRect menu_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
-    SDL_FRect camera_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
+    wb_rect move_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
+    wb_rect menu_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
+    wb_rect camera_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
 
     {
         int w;
@@ -513,7 +526,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         mode_room_get_button_size(impl->controller->renderer, impl->move_button.texture,
                                   MODE_ROOM_MOVE_TOGGLE_FALLBACK_W, MODE_ROOM_MOVE_TOGGLE_FALLBACK_H, &w, &h);
         move_toggle_rect.x = (float)(SCREEN_W - (w + SPACING * 2));
-        move_toggle_rect.y = (float)(SCREEN_H - (h + SPACING * 2) + (int)WIDEBRIM_SCREEN_HEIGHT);
+        move_toggle_rect.y = (float)(SCREEN_H - (h + SPACING * 2) + (int)WB_SCREEN_HEIGHT);
         move_toggle_rect.w = (float)w;
         move_toggle_rect.h = (float)h;
     }
@@ -523,7 +536,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         mode_room_get_button_size(impl->controller->renderer, impl->menu_button.texture,
                                   MODE_ROOM_MENU_TOGGLE_FALLBACK_W, MODE_ROOM_MENU_TOGGLE_FALLBACK_H, &w, &h);
         menu_toggle_rect.x = (float)(SCREEN_W - (w + SPACING));
-        menu_toggle_rect.y = (float)(SPACING + (int)WIDEBRIM_SCREEN_HEIGHT);
+        menu_toggle_rect.y = (float)(SPACING + (int)WB_SCREEN_HEIGHT);
         menu_toggle_rect.w = (float)w;
         menu_toggle_rect.h = (float)h;
     }
@@ -533,7 +546,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         mode_room_get_button_size(impl->controller->renderer, impl->camera_button.texture,
                                   MODE_ROOM_CAMERA_TOGGLE_FALLBACK_W, MODE_ROOM_CAMERA_TOGGLE_FALLBACK_H, &w, &h);
         camera_toggle_rect.x = (float)MODE_ROOM_MENU_TOGGLE_X;
-        camera_toggle_rect.y = (float)(SPACING + MODE_ROOM_MENU_TOGGLE_FALLBACK_H + SPACING + (int)WIDEBRIM_SCREEN_HEIGHT);
+        camera_toggle_rect.y = (float)(SPACING + MODE_ROOM_MENU_TOGGLE_FALLBACK_H + SPACING + (int)WB_SCREEN_HEIGHT);
         camera_toggle_rect.w = (float)w;
         camera_toggle_rect.h = (float)h;
     }
@@ -551,9 +564,9 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
                     sprite = exit_sprite->texture;
                 }
             }
-            SDL_FRect rect;
+            wb_rect rect;
             rect.x = (float)exit->bounding.x;
-            rect.y = (float)exit->bounding.y + (float)WIDEBRIM_SCREEN_HEIGHT;
+            rect.y = (float)exit->bounding.y + (float)WB_SCREEN_HEIGHT;
             rect.w = (float)exit->bounding.width;
             rect.h = (float)exit->bounding.height;
 
@@ -561,7 +574,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
                 renderer_draw_texture(impl->controller->renderer, sprite, &rect);
             } else {
                 /* no decoded sprite for this id_image - fall back to an outline so the hotspot stays visible */
-                renderer_set_blend_mode(impl->controller->renderer, WIDEBRIM_BLEND_MODE_BLEND);
+                renderer_set_blend_mode(impl->controller->renderer, WB_BLEND_MODE_BLEND);
                 renderer_draw_rect(impl->controller->renderer, &rect, 255, 255, 0, 160);
             }
         }
@@ -621,7 +634,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
     }
 
     if (impl->title.texture) {
-        SDL_FRect rect;
+        wb_rect rect;
         rect.x = (float)(MODE_ROOM_TITLE_CENTER_X - impl->title.width / 2);
         rect.y = (float)MODE_ROOM_TITLE_Y;
         rect.w = (float)impl->title.width;

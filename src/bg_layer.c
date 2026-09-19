@@ -65,13 +65,13 @@ static void bg_layer_update_impl(void *impl, float dt_ms) {
 
 static void bg_layer_draw_one(renderer *renderer_instance, renderer_texture *tex, int y_offset,
                              float shake_remaining_ms, uint8_t darkness) {
-    SDL_FRect dst;
+    wb_rect dst;
     int shake_x = 0, shake_y = 0;
 
     dst.x = 0.0f;
     dst.y = (float)y_offset;
-    dst.w = (float)WIDEBRIM_SCREEN_WIDTH;
-    dst.h = (float)WIDEBRIM_SCREEN_HEIGHT;
+    dst.w = (float)WB_SCREEN_WIDTH;
+    dst.h = (float)WB_SCREEN_HEIGHT;
 
     if (shake_remaining_ms > 0.0f) {
         shake_x = (SDL_rand(5) - 2);
@@ -85,12 +85,12 @@ static void bg_layer_draw_one(renderer *renderer_instance, renderer_texture *tex
     }
 
     if (darkness > 0) {
-        SDL_FRect overlay;
+        wb_rect overlay;
         overlay.x = 0.0f;
         overlay.y = (float)y_offset;
-        overlay.w = (float)WIDEBRIM_SCREEN_WIDTH;
-        overlay.h = (float)WIDEBRIM_SCREEN_HEIGHT;
-        renderer_set_blend_mode(renderer_instance, WIDEBRIM_BLEND_MODE_BLEND);
+        overlay.w = (float)WB_SCREEN_WIDTH;
+        overlay.h = (float)WB_SCREEN_HEIGHT;
+        renderer_set_blend_mode(renderer_instance, WB_BLEND_MODE_BLEND);
         renderer_fill_rect(renderer_instance, &overlay, 0, 0, 0, darkness);
     }
 }
@@ -98,7 +98,7 @@ static void bg_layer_draw_one(renderer *renderer_instance, renderer_texture *tex
 static void bg_layer_draw_impl(void *impl, renderer *renderer_instance) {
     bg_layer *bg = (bg_layer *)impl;
     bg_layer_draw_one(renderer_instance, bg->tex_sub, 0, bg->shake_sub_remaining_ms, bg->darkness_sub);
-    bg_layer_draw_one(renderer_instance, bg->tex_main, WIDEBRIM_SCREEN_HEIGHT, bg->shake_main_remaining_ms,
+    bg_layer_draw_one(renderer_instance, bg->tex_main, WB_SCREEN_HEIGHT, bg->shake_main_remaining_ms,
                      bg->darkness_main);
 }
 
