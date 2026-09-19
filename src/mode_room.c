@@ -1,5 +1,6 @@
 #include "mode_room.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 
 #include "bg_layer.h"
 #include "bg_loader.h"
+#include "platform_time.h"
 
 #define MODE_ROOM_EXIT_IMAGE_COUNT 8
 #define MODE_ROOM_TITLE_CENTER_X 170
@@ -18,6 +20,7 @@
 #define SCREEN_W 256
 #define SCREEN_H 192
 #define SPACING 2
+
 #define MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES 6
 
 #define MODE_ROOM_MOVE_TOGGLE_FALLBACK_W 24
@@ -67,6 +70,7 @@ typedef struct {
     int pending_place_num;
     bool done;
     bool in_move_mode;
+    uint64_t exit_breath_start_ms;
     mode_room_icon_state move_button;
     mode_room_icon_state menu_button;
     mode_room_icon_state camera_button;
@@ -257,9 +261,33 @@ static bool mode_room_camera_rect_contains_point(mode_room_impl *impl, float x, 
     return mode_room_button_rect_contains_point((int)x, (int)room_y, rect_x, rect_y, w, h);
 }
 
+static uint8_t mode_room_exit_sprite_alpha(uint64_t animation_start_ms, bool pressed) {
+    if (pressed) {
+        return 255u;
+    }
+
+    if (animation_start_ms == 0u) {
+        animation_start_ms = platform_time_get_ticks();
+    }
+
+    int minimum_alpha = 30;
+    int maximum_alpha = 255;
+    double frequency = 6.0;
+    double elapsed_sec = (double)(platform_time_get_ticks() - animation_start_ms) / 1000.0;
+    double breath = 0.5 + 0.5 * sin(elapsed_sec * frequency + M_PI_2);
+    int alpha = (int)(minimum_alpha + breath * (maximum_alpha - minimum_alpha));
+    if (alpha < minimum_alpha) {
+        alpha = minimum_alpha;
+    } else if (alpha > maximum_alpha) {
+        alpha = maximum_alpha;
+    }
+    return (uint8_t)alpha;
+}
+
 static void mode_room_set_move_mode(mode_room_impl *impl, bool enabled) {
     impl->in_move_mode = enabled;
     impl->highlighted_exit_index = -1;
+    impl->exit_breath_start_ms = platform_time_get_ticks();
 }
 
 static bool mode_room_handle_key(void *implp, const wb_input_event *event) {
@@ -368,11 +396,7 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
     switch (event->type) {
         case WB_INPUT_EVENT_MOUSE_MOTION:
             if (impl->in_move_mode) {
-                x = (float)event->data.mouse_motion.x;
-                y = (float)event->data.mouse_motion.y - (float)WB_SCREEN_HEIGHT;
-                exit_index = mode_room_find_exit_index_at_point(impl, x, y);
-                if (exit_index != impl->highlighted_exit_index) {
-                    impl->highlighted_exit_index = exit_index;
+                if (impl->highlighted_exit_index >= 0) {
                     return true;
                 }
                 return false;
@@ -403,24 +427,12 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
                 y = (float)event->data.mouse_button.y - (float)WB_SCREEN_HEIGHT;
                 exit_index = mode_room_find_exit_index_at_point(impl, x, y);
                 if (exit_index >= 0) {
-                    const mh_place_exit *exit = &impl->place.exits[exit_index];
-                    if (mh_place_exit_can_spawn_event(exit)) {
-                        fprintf(stderr,
-                                "widebrim: exit %d triggers a scripted event (mode_decoding=%u); "
-                                "switching to DramaEvent\n",
-                                exit_index, exit->mode_decoding);
-                        game_state_set_event_id(impl->state, exit->spawn_data);
-                        game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
-                        game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
-                        impl->done = true;
-                        return true;
-                    }
-                    impl->pending_place_num = exit->spawn_data;
-                    screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
-                                                mode_room_on_transition_fade_done, impl);
+                    impl->highlighted_exit_index = exit_index;
+                    impl->exit_breath_start_ms = platform_time_get_ticks();
                     return true;
                 }
 
+                impl->highlighted_exit_index = -1;
                 mode_room_set_move_mode(impl, false);
                 return false;
             }
@@ -460,6 +472,30 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
             }
         case WB_INPUT_EVENT_MOUSE_BUTTON_UP:
             if (impl->in_move_mode) {
+                x = (float)event->data.mouse_button.x;
+                y = (float)event->data.mouse_button.y - (float)WB_SCREEN_HEIGHT;
+                exit_index = mode_room_find_exit_index_at_point(impl, x, y);
+
+                if (impl->highlighted_exit_index >= 0 && exit_index == impl->highlighted_exit_index) {
+                    const mh_place_exit *exit = &impl->place.exits[exit_index];
+                    if (mh_place_exit_can_spawn_event(exit)) {
+                        fprintf(stderr,
+                                "widebrim: exit %d triggers a scripted event (mode_decoding=%u); "
+                                "switching to DramaEvent\n",
+                                exit_index, exit->mode_decoding);
+                        game_state_set_event_id(impl->state, exit->spawn_data);
+                        game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
+                        game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
+                        impl->done = true;
+                    } else {
+                        impl->pending_place_num = exit->spawn_data;
+                        screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
+                                                    mode_room_on_transition_fade_done, impl);
+                    }
+                    return true;
+                }
+
+                impl->highlighted_exit_index = -1;
                 return false;
             }
 
@@ -552,17 +588,12 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
     }
 
     if (impl->in_move_mode) {
-        for (i = 0; i < impl->place.exit_count; ++i) {
-            const mh_place_exit *exit = &impl->place.exits[i];
+        if (impl->highlighted_exit_index >= 0) {
+            const mh_place_exit *exit = &impl->place.exits[impl->highlighted_exit_index];
             renderer_texture *sprite = NULL;
             if (exit->id_image < MODE_ROOM_EXIT_IMAGE_COUNT) {
                 mode_room_exit_sprite_state *exit_sprite = &impl->exit_sprites[exit->id_image];
-                if ((int)i == impl->highlighted_exit_index) {
-                    sprite = exit_sprite->highlighted_texture ? exit_sprite->highlighted_texture
-                                                            : exit_sprite->texture;
-                } else {
-                    sprite = exit_sprite->texture;
-                }
+                sprite = exit_sprite->highlighted_texture ? exit_sprite->highlighted_texture : exit_sprite->texture;
             }
             wb_rect rect;
             rect.x = (float)exit->bounding.x;
@@ -571,11 +602,37 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
             rect.h = (float)exit->bounding.height;
 
             if (sprite) {
+                renderer_set_texture_alpha(impl->controller->renderer, sprite, 255u);
                 renderer_draw_texture(impl->controller->renderer, sprite, &rect);
+                renderer_set_texture_alpha(impl->controller->renderer, sprite, 255u);
             } else {
-                /* no decoded sprite for this id_image - fall back to an outline so the hotspot stays visible */
                 renderer_set_blend_mode(impl->controller->renderer, WB_BLEND_MODE_BLEND);
-                renderer_draw_rect(impl->controller->renderer, &rect, 255, 255, 0, 160);
+                renderer_draw_rect(impl->controller->renderer, &rect, 255, 255, 0, 255);
+            }
+        } else {
+            for (i = 0; i < impl->place.exit_count; ++i) {
+                const mh_place_exit *exit = &impl->place.exits[i];
+                renderer_texture *sprite = NULL;
+                if (exit->id_image < MODE_ROOM_EXIT_IMAGE_COUNT) {
+                    mode_room_exit_sprite_state *exit_sprite = &impl->exit_sprites[exit->id_image];
+                    sprite = exit_sprite->texture;
+                }
+                wb_rect rect;
+                rect.x = (float)exit->bounding.x;
+                rect.y = (float)exit->bounding.y + (float)WB_SCREEN_HEIGHT;
+                rect.w = (float)exit->bounding.width;
+                rect.h = (float)exit->bounding.height;
+
+                if (sprite) {
+                    uint8_t sprite_alpha = mode_room_exit_sprite_alpha(impl->exit_breath_start_ms, false);
+                    renderer_set_texture_alpha(impl->controller->renderer, sprite, sprite_alpha);
+                    renderer_draw_texture(impl->controller->renderer, sprite, &rect);
+                    renderer_set_texture_alpha(impl->controller->renderer, sprite, 255u);
+                } else {
+                    renderer_set_blend_mode(impl->controller->renderer, WB_BLEND_MODE_BLEND);
+                    renderer_draw_rect(impl->controller->renderer, &rect, 255, 255, 0,
+                                       mode_room_exit_sprite_alpha(impl->exit_breath_start_ms, false));
+                }
             }
         }
     } else {
@@ -702,6 +759,7 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->pending_place_num = 0;
     impl->done = false;
     impl->in_move_mode = false;
+    impl->exit_breath_start_ms = 0u;
     impl->move_button.pressed = false;
     impl->move_button.release_frames = 0;
     impl->move_button.pending_mode = false;

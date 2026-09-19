@@ -25,6 +25,7 @@ typedef struct renderer_vtable {
     void (*draw_texture)(renderer *renderer, const renderer_texture *texture, const wb_rect *dst);
     void (*draw_rect)(renderer *renderer, const wb_rect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
     void (*fill_rect)(renderer *renderer, const wb_rect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+    void (*set_texture_alpha)(renderer *renderer, renderer_texture *texture, uint8_t alpha);
     void (*set_blend_mode)(renderer *renderer, wb_blend_mode mode);
     void (*set_global_texture_blend_mode)(renderer *renderer, wb_blend_mode mode);
     void (*clear)(renderer *renderer, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
@@ -43,6 +44,12 @@ renderer *renderer_create_sdl(void *sdl_renderer);
 static inline void renderer_destroy(renderer *renderer_instance) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->destroy) {
         renderer_instance->vt->destroy(renderer_instance);
+    }
+}
+
+static inline void renderer_set_texture_alpha(renderer *renderer_instance, renderer_texture *texture, uint8_t alpha) {
+    if (renderer_instance && renderer_instance->vt && renderer_instance->vt->set_texture_alpha) {
+        renderer_instance->vt->set_texture_alpha(renderer_instance, texture, alpha);
     }
 }
 

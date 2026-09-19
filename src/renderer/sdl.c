@@ -135,6 +135,14 @@ static void sdl_renderer_fill_rect(renderer *renderer_instance, const wb_rect *r
     SDL_RenderFillRect(impl->renderer, &sdl_rect);
 }
 
+static void sdl_renderer_set_texture_alpha(renderer *renderer_instance, renderer_texture *texture, uint8_t alpha) {
+    (void)renderer_instance;
+    if (!texture || !texture->texture) {
+        return;
+    }
+    SDL_SetTextureAlphaMod(texture->texture, alpha);
+}
+
 static void sdl_renderer_set_blend_mode(renderer *renderer_instance, wb_blend_mode mode) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
     SDL_SetRenderDrawBlendMode(impl->renderer, sdl_blend_mode_from_widebrim(mode));
@@ -207,6 +215,7 @@ static const renderer_vtable g_sdl_renderer_vtable = {
     .draw_texture = sdl_renderer_draw_texture,
     .draw_rect = sdl_renderer_draw_rect,
     .fill_rect = sdl_renderer_fill_rect,
+    .set_texture_alpha = sdl_renderer_set_texture_alpha,
     .set_blend_mode = sdl_renderer_set_blend_mode,
     .set_global_texture_blend_mode = sdl_renderer_set_global_texture_blend_mode,
     .clear = sdl_renderer_clear,
