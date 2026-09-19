@@ -47,12 +47,23 @@ typedef struct {
     bool done;
     bool in_move_mode;
     bool move_toggle_pressed;
+    bool move_toggle_hovered;
+    bool menu_toggle_pressed;
+    bool menu_toggle_hovered;
+    bool camera_toggle_pressed;
+    bool camera_toggle_hovered;
     int highlighted_exit_index;
     SDL_Texture *exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
     SDL_Texture *exit_sprites_highlighted[MODE_ROOM_EXIT_IMAGE_COUNT];
     SDL_Texture *move_button_texture;
+    SDL_Texture *move_button_texture_on;
+    SDL_Texture *move_button_texture_click;
     SDL_Texture *menu_button_texture;
+    SDL_Texture *menu_button_texture_on;
+    SDL_Texture *menu_button_texture_click;
     SDL_Texture *camera_button_texture;
+    SDL_Texture *camera_button_texture_on;
+    SDL_Texture *camera_button_texture_click;
     SDL_Texture *title_texture;
     int title_width;
     int title_height;
@@ -337,6 +348,18 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
 
     if (event->type == SDL_EVENT_MOUSE_MOTION) {
         if (!impl->in_move_mode) {
+            bool move_hovered = mode_room_toggle_rect_contains_point(impl, event->motion.x, event->motion.y);
+            bool menu_hovered = mode_room_menu_rect_contains_point(impl, event->motion.x, event->motion.y);
+            bool camera_hovered = mode_room_camera_rect_contains_point(impl, event->motion.x, event->motion.y);
+
+            impl->move_toggle_hovered = move_hovered;
+            impl->menu_toggle_hovered = menu_hovered;
+            impl->camera_toggle_hovered = camera_hovered;
+
+            if (impl->move_toggle_pressed || impl->menu_toggle_pressed || impl->camera_toggle_pressed ||
+                move_hovered || menu_hovered || camera_hovered) {
+                return true;
+            }
             return false;
         }
         x = event->motion.x;
@@ -349,49 +372,75 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
     }
 
     if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
+        bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
+        bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
         x = event->button.x;
         y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
 
-        if (mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y)) {
+        if (move_hit) {
             impl->move_toggle_pressed = true;
+            impl->move_toggle_hovered = true;
             return true;
         }
         impl->move_toggle_pressed = false;
+        impl->move_toggle_hovered = false;
 
-        if (mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y)) {
+        if (menu_hit) {
+            impl->menu_toggle_pressed = true;
+            impl->menu_toggle_hovered = true;
             fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
             mode_room_set_move_mode(impl, false);
             return true;
         }
-        if (mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y)) {
+        impl->menu_toggle_pressed = false;
+        impl->menu_toggle_hovered = false;
+        if (camera_hit) {
+            impl->camera_toggle_pressed = true;
+            impl->camera_toggle_hovered = true;
             fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
             mode_room_set_move_mode(impl, false);
             return true;
         }
+        impl->camera_toggle_pressed = false;
+        impl->camera_toggle_hovered = false;
     }
 
     if (event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+        bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
+        bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
+        bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
         x = event->button.x;
         y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
 
-        if (impl->move_toggle_pressed && mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y)) {
+        if (impl->move_toggle_pressed && move_hit) {
             mode_room_set_move_mode(impl, !impl->in_move_mode);
             impl->move_toggle_pressed = false;
+            impl->move_toggle_hovered = false;
             return true;
         }
 
         impl->move_toggle_pressed = false;
+        impl->move_toggle_hovered = move_hit;
 
-        if (mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y)) {
+        if (menu_hit) {
+            impl->menu_toggle_pressed = false;
+            impl->menu_toggle_hovered = false;
             fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
             mode_room_set_move_mode(impl, false);
             return true;
         }
-        if (mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y)) {
+        impl->menu_toggle_pressed = false;
+        impl->menu_toggle_hovered = false;
+        if (camera_hit) {
+            impl->camera_toggle_pressed = false;
+            impl->camera_toggle_hovered = false;
             fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
             mode_room_set_move_mode(impl, false);
             return true;
         }
+        impl->camera_toggle_pressed = false;
+        impl->camera_toggle_hovered = false;
     }
 
     if (event->type != SDL_EVENT_MOUSE_BUTTON_DOWN && event->type != SDL_EVENT_MOUSE_BUTTON_UP) {
@@ -516,24 +565,44 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
             }
         }
     } else {
-        if (impl->move_button_texture) {
-            SDL_RenderTexture(renderer, impl->move_button_texture, NULL, &move_toggle_rect);
+        SDL_Texture *move_texture = impl->move_button_texture;
+        SDL_Texture *menu_texture = impl->menu_button_texture;
+        SDL_Texture *camera_texture = impl->camera_button_texture;
+
+        if (impl->move_toggle_pressed && impl->move_button_texture_click) {
+            move_texture = impl->move_button_texture_click;
+        } else if (impl->move_toggle_hovered && impl->move_button_texture_on) {
+            move_texture = impl->move_button_texture_on;
+        }
+        if (impl->menu_toggle_pressed && impl->menu_button_texture_click) {
+            menu_texture = impl->menu_button_texture_click;
+        } else if (impl->menu_toggle_hovered && impl->menu_button_texture_on) {
+            menu_texture = impl->menu_button_texture_on;
+        }
+        if (impl->camera_toggle_pressed && impl->camera_button_texture_click) {
+            camera_texture = impl->camera_button_texture_click;
+        } else if (impl->camera_toggle_hovered && impl->camera_button_texture_on) {
+            camera_texture = impl->camera_button_texture_on;
+        }
+
+        if (move_texture) {
+            SDL_RenderTexture(renderer, move_texture, NULL, &move_toggle_rect);
         } else {
             SDL_SetRenderDrawColor(renderer, 42, 255, 180, 220);
             SDL_RenderFillRect(renderer, &move_toggle_rect);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderRect(renderer, &move_toggle_rect);
         }
-        if (impl->menu_button_texture) {
-            SDL_RenderTexture(renderer, impl->menu_button_texture, NULL, &menu_toggle_rect);
+        if (menu_texture) {
+            SDL_RenderTexture(renderer, menu_texture, NULL, &menu_toggle_rect);
         } else {
             SDL_SetRenderDrawColor(renderer, 90, 160, 255, 220);
             SDL_RenderFillRect(renderer, &menu_toggle_rect);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderRect(renderer, &menu_toggle_rect);
         }
-        if (impl->camera_button_texture) {
-            SDL_RenderTexture(renderer, impl->camera_button_texture, NULL, &camera_toggle_rect);
+        if (camera_texture) {
+            SDL_RenderTexture(renderer, camera_texture, NULL, &camera_toggle_rect);
         } else {
             SDL_SetRenderDrawColor(renderer, 255, 170, 60, 220);
             SDL_RenderFillRect(renderer, &camera_toggle_rect);
@@ -571,11 +640,29 @@ static void mode_room_destroy(void *implp) {
     if (impl->move_button_texture) {
         SDL_DestroyTexture(impl->move_button_texture);
     }
+    if (impl->move_button_texture_on) {
+        SDL_DestroyTexture(impl->move_button_texture_on);
+    }
+    if (impl->move_button_texture_click) {
+        SDL_DestroyTexture(impl->move_button_texture_click);
+    }
     if (impl->menu_button_texture) {
         SDL_DestroyTexture(impl->menu_button_texture);
     }
+    if (impl->menu_button_texture_on) {
+        SDL_DestroyTexture(impl->menu_button_texture_on);
+    }
+    if (impl->menu_button_texture_click) {
+        SDL_DestroyTexture(impl->menu_button_texture_click);
+    }
     if (impl->camera_button_texture) {
         SDL_DestroyTexture(impl->camera_button_texture);
+    }
+    if (impl->camera_button_texture_on) {
+        SDL_DestroyTexture(impl->camera_button_texture_on);
+    }
+    if (impl->camera_button_texture_click) {
+        SDL_DestroyTexture(impl->camera_button_texture_click);
     }
     if (impl->title_texture) {
         SDL_DestroyTexture(impl->title_texture);
@@ -594,10 +681,21 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->done = false;
     impl->in_move_mode = false;
     impl->move_toggle_pressed = false;
+    impl->move_toggle_hovered = false;
+    impl->menu_toggle_pressed = false;
+    impl->menu_toggle_hovered = false;
+    impl->camera_toggle_pressed = false;
+    impl->camera_toggle_hovered = false;
     impl->highlighted_exit_index = -1;
     impl->move_button_texture = NULL;
+    impl->move_button_texture_on = NULL;
+    impl->move_button_texture_click = NULL;
     impl->menu_button_texture = NULL;
+    impl->menu_button_texture_on = NULL;
+    impl->menu_button_texture_click = NULL;
     impl->camera_button_texture = NULL;
+    impl->camera_button_texture_on = NULL;
+    impl->camera_button_texture_click = NULL;
     impl->title_texture = NULL;
     impl->title_width = 0;
     impl->title_height = 0;
@@ -608,10 +706,22 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     mode_room_load_exit_sprites(impl);
     impl->move_button_texture = mode_room_load_button_texture(state, controller->bg->renderer,
                                                               "ani/map/movemode.arc", "off");
+    impl->move_button_texture_on = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                                 "ani/map/movemode.arc", "on");
+    impl->move_button_texture_click = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                                     "ani/map/movemode.arc", "click");
     impl->menu_button_texture = mode_room_load_button_texture(state, controller->bg->renderer,
                                                               "ani/map/menu_icon.arc", "off");
+    impl->menu_button_texture_on = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                                 "ani/map/menu_icon.arc", "on");
+    impl->menu_button_texture_click = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                                     "ani/map/menu_icon.arc", "click");
     impl->camera_button_texture = mode_room_load_button_texture(state, controller->bg->renderer,
                                                                 "ani/map/camera_icon.arc", "off");
+    impl->camera_button_texture_on = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                                   "ani/map/camera_icon.arc", "on");
+    impl->camera_button_texture_click = mode_room_load_button_texture(state, controller->bg->renderer,
+                                                                       "ani/map/camera_icon.arc", "click");
     if (!mode_room_load_current(impl)) {
         fprintf(stderr, "widebrim: room mode failed to load place_num=%d\n", game_state_get_place_num(state));
     }
