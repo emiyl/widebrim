@@ -9,12 +9,20 @@
 
 int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, const char *language) {
     rt->window = NULL;
+    rt->input = NULL;
     rt->running = false;
     rt->speed_modifier = false;
     rt->alpha_blend_enabled = true;
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         fprintf(stderr, "widebrim: SDL_Init failed: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    rt->input = input_create_sdl();
+    if (!rt->input) {
+        fprintf(stderr, "widebrim: input_create_sdl failed\n");
+        SDL_Quit();
         return -1;
     }
 
@@ -35,6 +43,8 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
 
     if (game_state_init(&rt->state, datafiles_root, language) != 0) {
         fprintf(stderr, "widebrim: failed to initialize Datafiles access at '%s'\n", datafiles_root);
+        input_destroy(rt->input);
+        rt->input = NULL;
         window_destroy(rt->window);
         rt->window = NULL;
         SDL_Quit();
@@ -54,6 +64,10 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
 void widebrim_runtime_destroy(widebrim_runtime *rt) {
     mode_spawner_destroy(&rt->spawner);
     game_state_destroy(&rt->state);
+    if (rt->input) {
+        input_destroy(rt->input);
+        rt->input = NULL;
+    }
     if (rt->window) {
         window_destroy(rt->window);
         rt->window = NULL;
@@ -78,7 +92,7 @@ void widebrim_runtime_run(widebrim_runtime *rt) {
         mode_spawner_draw(&rt->spawner, rt->spawner.controller.renderer);
         renderer_present(rt->spawner.controller.renderer);
 
-        while (SDL_PollEvent(&event)) {
+        while (input_poll_event(rt->input, &event)) {
             window_convert_event_to_render_coordinates(rt->window, &event);
 
             if (event.type == SDL_EVENT_QUIT) {

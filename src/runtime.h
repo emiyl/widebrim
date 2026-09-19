@@ -7,11 +7,13 @@
 
 #include "clock.h"
 #include "game_state.h"
+#include "input.h"
 #include "mode_spawner.h"
 #include "window.h"
 
 typedef struct {
     window *window;
+    input *input;
     game_state state;
     mode_spawner spawner;
     widebrim_clock clock;
