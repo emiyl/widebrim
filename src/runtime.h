@@ -8,10 +8,10 @@
 #include "clock.h"
 #include "game_state.h"
 #include "mode_spawner.h"
+#include "window.h"
 
 typedef struct {
-    SDL_Window *window;
-    SDL_Renderer *renderer;
+    window *window;
     game_state state;
     mode_spawner spawner;
     widebrim_clock clock;

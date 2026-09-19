@@ -9,7 +9,6 @@
 
 int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, const char *language) {
     rt->window = NULL;
-    rt->renderer = NULL;
     rt->running = false;
     rt->speed_modifier = false;
     rt->alpha_blend_enabled = true;
@@ -19,31 +18,30 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
         return -1;
     }
 
-    if (!SDL_CreateWindowAndRenderer("widebrim",
-                                      WIDEBRIM_SCREEN_WIDTH * WIDEBRIM_WINDOW_SCALE,
-                                      WIDEBRIM_SCREEN_HEIGHT * 2 * WIDEBRIM_WINDOW_SCALE,
-                                      0,
-                                      &rt->window,
-                                      &rt->renderer)) {
-        fprintf(stderr, "widebrim: SDL_CreateWindowAndRenderer failed: %s\n", SDL_GetError());
+    rt->window = window_create_sdl("widebrim",
+                                  WIDEBRIM_SCREEN_WIDTH * WIDEBRIM_WINDOW_SCALE,
+                                  WIDEBRIM_SCREEN_HEIGHT * 2 * WIDEBRIM_WINDOW_SCALE,
+                                  0);
+    if (!rt->window) {
+        fprintf(stderr, "widebrim: window_create_sdl failed: %s\n", SDL_GetError());
         SDL_Quit();
         return -1;
     }
-    SDL_SetRenderLogicalPresentation(rt->renderer, WIDEBRIM_SCREEN_WIDTH, WIDEBRIM_SCREEN_HEIGHT * 2,
-                                      SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
-    SDL_SetRenderScale(rt->renderer, 1.0f, 1.0f);
-    SDL_SetDefaultTextureScaleMode(rt->renderer, SDL_SCALEMODE_NEAREST);
-    SDL_SetRenderDrawBlendMode(rt->renderer, SDL_BLENDMODE_BLEND);
+    window_set_logical_presentation(rt->window, WIDEBRIM_SCREEN_WIDTH, WIDEBRIM_SCREEN_HEIGHT * 2,
+                                   SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+    window_set_scale(rt->window, 1.0f, 1.0f);
+    window_set_default_texture_scale_mode(rt->window, SDL_SCALEMODE_NEAREST);
+    window_set_draw_blend_mode(rt->window, SDL_BLENDMODE_BLEND);
 
     if (game_state_init(&rt->state, datafiles_root, language) != 0) {
         fprintf(stderr, "widebrim: failed to initialize Datafiles access at '%s'\n", datafiles_root);
-        SDL_DestroyRenderer(rt->renderer);
-        SDL_DestroyWindow(rt->window);
+        window_destroy(rt->window);
+        rt->window = NULL;
         SDL_Quit();
         return -1;
     }
 
-    mode_spawner_init(&rt->spawner, &rt->state, rt->renderer);
+    mode_spawner_init(&rt->spawner, &rt->state, window_get_sdl_renderer(rt->window));
     renderer_set_global_texture_blend_mode(rt->spawner.controller.renderer, SDL_BLENDMODE_BLEND);
     game_state_set_mode(&rt->state, GAME_MODE_RESET);
 
@@ -56,11 +54,9 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
 void widebrim_runtime_destroy(widebrim_runtime *rt) {
     mode_spawner_destroy(&rt->spawner);
     game_state_destroy(&rt->state);
-    if (rt->renderer) {
-        SDL_DestroyRenderer(rt->renderer);
-    }
     if (rt->window) {
-        SDL_DestroyWindow(rt->window);
+        window_destroy(rt->window);
+        rt->window = NULL;
     }
     SDL_Quit();
 }
@@ -83,7 +79,7 @@ void widebrim_runtime_run(widebrim_runtime *rt) {
         renderer_present(rt->spawner.controller.renderer);
 
         while (SDL_PollEvent(&event)) {
-            SDL_ConvertEventToRenderCoordinates(rt->renderer, &event);
+            window_convert_event_to_render_coordinates(rt->window, &event);
 
             if (event.type == SDL_EVENT_QUIT) {
                 rt->running = false;
@@ -94,8 +90,8 @@ void widebrim_runtime_run(widebrim_runtime *rt) {
                 mode_spawner_handle_touch(&rt->spawner, &event);
             } else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_TAB) {
                 rt->alpha_blend_enabled = !rt->alpha_blend_enabled;
-                SDL_SetRenderDrawBlendMode(rt->renderer,
-                                           rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
+                window_set_draw_blend_mode(rt->window,
+                                          rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
                 renderer_set_global_texture_blend_mode(rt->spawner.controller.renderer,
                                                       rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
             } else if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
