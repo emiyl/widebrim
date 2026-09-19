@@ -5,22 +5,23 @@
 
 #include <SDL3/SDL.h>
 
+#include "renderer.h"
 #include "screen.h"
 
 #define WIDEBRIM_SCREEN_WIDTH 256
 #define WIDEBRIM_SCREEN_HEIGHT 192
 
 typedef struct {
-    SDL_Renderer *renderer;
-    SDL_Texture *tex_main;
-    SDL_Texture *tex_sub;
+    renderer *renderer;
+    renderer_texture *tex_main;
+    renderer_texture *tex_sub;
     uint8_t darkness_main;
     uint8_t darkness_sub;
     float shake_main_remaining_ms;
     float shake_sub_remaining_ms;
 } bg_layer;
 
-void bg_layer_init(bg_layer *bg, SDL_Renderer *renderer);
+void bg_layer_init(bg_layer *bg, renderer *renderer_instance);
 void bg_layer_destroy_state(bg_layer *bg);
 
 void bg_layer_set_main_rgba(bg_layer *bg, const uint8_t *rgba, int width, int height);

@@ -29,11 +29,22 @@ include_directories(
     ${SDL3_INCLUDE_DIRS}
 )
 
-file(GLOB_RECURSE WIDEBRIM_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
-)
+set(RENDERER "sdl3" CACHE STRING "Renderer backend to build")
+set_property(CACHE RENDERER PROPERTY STRINGS "sdl3")
+
+file(GLOB WIDEBRIM_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+
+if(RENDERER STREQUAL "sdl3")
+    list(APPEND WIDEBRIM_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/sdl.c"
+    )
+else()
+    message(FATAL_ERROR "Unsupported renderer backend '${RENDERER}'. Supported values: sdl3")
+endif()
 
 add_executable(widebrim ${WIDEBRIM_SOURCES})
+
+target_compile_definitions(widebrim PRIVATE "RENDERER=${RENDERER}")
 
 target_include_directories(widebrim PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

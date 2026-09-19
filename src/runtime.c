@@ -3,7 +3,6 @@
 #include <stdio.h>
 
 #include "bg_layer.h"
-#include "texture_util.h"
 
 #define WIDEBRIM_TARGET_FRAMERATE 60.0
 #define WIDEBRIM_WINDOW_SCALE 2
@@ -35,7 +34,6 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
     SDL_SetRenderScale(rt->renderer, 1.0f, 1.0f);
     SDL_SetDefaultTextureScaleMode(rt->renderer, SDL_SCALEMODE_NEAREST);
     SDL_SetRenderDrawBlendMode(rt->renderer, SDL_BLENDMODE_BLEND);
-    texture_set_global_blend_mode(SDL_BLENDMODE_BLEND);
 
     if (game_state_init(&rt->state, datafiles_root, language) != 0) {
         fprintf(stderr, "widebrim: failed to initialize Datafiles access at '%s'\n", datafiles_root);
@@ -46,6 +44,7 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
     }
 
     mode_spawner_init(&rt->spawner, &rt->state, rt->renderer);
+    renderer_set_global_texture_blend_mode(rt->spawner.controller.renderer, SDL_BLENDMODE_BLEND);
     game_state_set_mode(&rt->state, GAME_MODE_RESET);
 
     rt->engine_skip_clock_event_type = SDL_RegisterEvents(1);
@@ -79,10 +78,9 @@ void widebrim_runtime_run(widebrim_runtime *rt) {
 
         mode_spawner_update(&rt->spawner, (float)dt_ms);
 
-        SDL_SetRenderDrawColor(rt->renderer, 0, 0, 0, 255);
-        SDL_RenderClear(rt->renderer);
-        mode_spawner_draw(&rt->spawner, rt->renderer);
-        SDL_RenderPresent(rt->renderer);
+        renderer_clear(rt->spawner.controller.renderer, 0, 0, 0, 255);
+        mode_spawner_draw(&rt->spawner, rt->spawner.controller.renderer);
+        renderer_present(rt->spawner.controller.renderer);
 
         while (SDL_PollEvent(&event)) {
             SDL_ConvertEventToRenderCoordinates(rt->renderer, &event);
@@ -98,7 +96,8 @@ void widebrim_runtime_run(widebrim_runtime *rt) {
                 rt->alpha_blend_enabled = !rt->alpha_blend_enabled;
                 SDL_SetRenderDrawBlendMode(rt->renderer,
                                            rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
-                texture_set_global_blend_mode(rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
+                renderer_set_global_texture_blend_mode(rt->spawner.controller.renderer,
+                                                      rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
             } else if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
                 mode_spawner_handle_key(&rt->spawner, &event);
             } else if (event.type == rt->engine_skip_clock_event_type) {

@@ -96,10 +96,11 @@ void mode_spawner_init(mode_spawner *ms, game_state *state, SDL_Renderer *render
     ms->switch_pending = false;
     ms->should_quit = false;
 
-    bg_layer_init(&ms->bg, renderer);
-    fader_layer_init(&ms->fader);
+    ms->controller.renderer = renderer_create_sdl(renderer);
     ms->controller.bg = &ms->bg;
     ms->controller.fader = &ms->fader;
+    bg_layer_init(&ms->bg, ms->controller.renderer);
+    fader_layer_init(&ms->fader);
 
     screen_collection_init(&ms->layers);
     screen_collection_add(&ms->layers, bg_layer_as_screen_layer(&ms->bg));
@@ -108,6 +109,10 @@ void mode_spawner_init(mode_spawner *ms, game_state *state, SDL_Renderer *render
 
 void mode_spawner_destroy(mode_spawner *ms) {
     screen_collection_free(&ms->layers); /* destroys the active mode's impl, if any */
+    if (ms->controller.renderer) {
+        renderer_destroy(ms->controller.renderer);
+        ms->controller.renderer = NULL;
+    }
     bg_layer_destroy_state(&ms->bg);
 }
 
@@ -134,8 +139,8 @@ void mode_spawner_update(mode_spawner *ms, float dt_ms) {
     }
 }
 
-void mode_spawner_draw(mode_spawner *ms, SDL_Renderer *renderer) {
-    screen_collection_draw(&ms->layers, renderer);
+void mode_spawner_draw(mode_spawner *ms, renderer *renderer_instance) {
+    screen_collection_draw(&ms->layers, renderer_instance);
 }
 
 bool mode_spawner_handle_key(mode_spawner *ms, const SDL_Event *event) {

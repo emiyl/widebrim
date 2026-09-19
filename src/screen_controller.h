@@ -3,10 +3,12 @@
 
 #include "bg_layer.h"
 #include "fader_layer.h"
+#include "renderer.h"
 
 typedef struct {
     bg_layer *bg;
     fader_layer *fader;
+    renderer *renderer;
 } screen_controller;
 
 static inline void screen_controller_set_bg_main(screen_controller *sc, const uint8_t *rgba, int w, int h) {

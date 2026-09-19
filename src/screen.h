@@ -6,10 +6,12 @@
 
 #include <SDL3/SDL.h>
 
+#include "renderer.h"
+
 typedef struct {
     void *impl;
     void (*update)(void *impl, float dt_ms);
-    void (*draw)(void *impl, SDL_Renderer *renderer);
+    void (*draw)(void *impl, renderer *renderer_instance);
     bool (*handle_key)(void *impl, const SDL_Event *event);
     bool (*handle_touch)(void *impl, const SDL_Event *event);
     void (*on_quit)(void *impl);
@@ -37,7 +39,7 @@ screen_layer screen_collection_pop(screen_collection *sc);
 screen_layer screen_collection_remove_at(screen_collection *sc, size_t index);
 
 void screen_collection_update(screen_collection *sc, float dt_ms);
-void screen_collection_draw(screen_collection *sc, SDL_Renderer *renderer);
+void screen_collection_draw(screen_collection *sc, renderer *renderer_instance);
 bool screen_collection_handle_key(screen_collection *sc, const SDL_Event *event);
 bool screen_collection_handle_touch(screen_collection *sc, const SDL_Event *event);
 void screen_collection_on_quit(screen_collection *sc);

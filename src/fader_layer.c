@@ -102,7 +102,7 @@ static void fader_layer_update_impl(void *impl, float dt_ms) {
     }
 }
 
-static void fader_layer_draw_rect(SDL_Renderer *renderer, const fader_timeline *tl, int y_offset) {
+static void fader_layer_draw_rect(renderer *renderer_instance, const fader_timeline *tl, int y_offset) {
     SDL_FRect rect;
     uint8_t alpha;
 
@@ -116,19 +116,18 @@ static void fader_layer_draw_rect(SDL_Renderer *renderer, const fader_timeline *
     rect.w = (float)WIDEBRIM_SCREEN_WIDTH;
     rect.h = (float)WIDEBRIM_SCREEN_HEIGHT;
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    renderer_set_blend_mode(renderer_instance, SDL_BLENDMODE_BLEND);
     if (tl->flash_white) {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, alpha);
+        renderer_fill_rect(renderer_instance, &rect, 255, 255, 255, alpha);
     } else {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, alpha);
+        renderer_fill_rect(renderer_instance, &rect, 0, 0, 0, alpha);
     }
-    SDL_RenderFillRect(renderer, &rect);
 }
 
-static void fader_layer_draw_impl(void *impl, SDL_Renderer *renderer) {
+static void fader_layer_draw_impl(void *impl, renderer *renderer_instance) {
     fader_layer *fader = (fader_layer *)impl;
-    fader_layer_draw_rect(renderer, &fader->sub_fade, 0);
-    fader_layer_draw_rect(renderer, &fader->main_fade, WIDEBRIM_SCREEN_HEIGHT);
+    fader_layer_draw_rect(renderer_instance, &fader->sub_fade, 0);
+    fader_layer_draw_rect(renderer_instance, &fader->main_fade, WIDEBRIM_SCREEN_HEIGHT);
 }
 
 static bool fader_layer_handle_touch_impl(void *impl, const SDL_Event *event) {

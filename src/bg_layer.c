@@ -2,10 +2,8 @@
 
 #include <stdlib.h>
 
-#include "texture_util.h"
-
-void bg_layer_init(bg_layer *bg, SDL_Renderer *renderer) {
-    bg->renderer = renderer;
+void bg_layer_init(bg_layer *bg, renderer *renderer_instance) {
+    bg->renderer = renderer_instance;
     bg->tex_main = NULL;
     bg->tex_sub = NULL;
     bg->darkness_main = 0;
@@ -16,27 +14,27 @@ void bg_layer_init(bg_layer *bg, SDL_Renderer *renderer) {
 
 void bg_layer_destroy_state(bg_layer *bg) {
     if (bg->tex_main) {
-        SDL_DestroyTexture(bg->tex_main);
+        renderer_destroy_texture(bg->renderer, bg->tex_main);
         bg->tex_main = NULL;
     }
     if (bg->tex_sub) {
-        SDL_DestroyTexture(bg->tex_sub);
+        renderer_destroy_texture(bg->renderer, bg->tex_sub);
         bg->tex_sub = NULL;
     }
 }
 
 void bg_layer_set_main_rgba(bg_layer *bg, const uint8_t *rgba, int width, int height) {
     if (bg->tex_main) {
-        SDL_DestroyTexture(bg->tex_main);
+        renderer_destroy_texture(bg->renderer, bg->tex_main);
     }
-    bg->tex_main = texture_from_rgba(bg->renderer, rgba, width, height);
+    bg->tex_main = renderer_create_texture_from_rgba(bg->renderer, rgba, width, height);
 }
 
 void bg_layer_set_sub_rgba(bg_layer *bg, const uint8_t *rgba, int width, int height) {
     if (bg->tex_sub) {
-        SDL_DestroyTexture(bg->tex_sub);
+        renderer_destroy_texture(bg->renderer, bg->tex_sub);
     }
-    bg->tex_sub = texture_from_rgba(bg->renderer, rgba, width, height);
+    bg->tex_sub = renderer_create_texture_from_rgba(bg->renderer, rgba, width, height);
 }
 
 void bg_layer_modify_palette_main(bg_layer *bg, uint8_t darkness) {
@@ -65,7 +63,8 @@ static void bg_layer_update_impl(void *impl, float dt_ms) {
     }
 }
 
-static void bg_layer_draw_one(SDL_Renderer *renderer, SDL_Texture *tex, int y_offset, float shake_remaining_ms, uint8_t darkness) {
+static void bg_layer_draw_one(renderer *renderer_instance, renderer_texture *tex, int y_offset,
+                             float shake_remaining_ms, uint8_t darkness) {
     SDL_FRect dst;
     int shake_x = 0, shake_y = 0;
 
@@ -82,7 +81,7 @@ static void bg_layer_draw_one(SDL_Renderer *renderer, SDL_Texture *tex, int y_of
     }
 
     if (tex) {
-        SDL_RenderTexture(renderer, tex, NULL, &dst);
+        renderer_draw_texture(renderer_instance, tex, &dst);
     }
 
     if (darkness > 0) {
@@ -91,16 +90,16 @@ static void bg_layer_draw_one(SDL_Renderer *renderer, SDL_Texture *tex, int y_of
         overlay.y = (float)y_offset;
         overlay.w = (float)WIDEBRIM_SCREEN_WIDTH;
         overlay.h = (float)WIDEBRIM_SCREEN_HEIGHT;
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, darkness);
-        SDL_RenderFillRect(renderer, &overlay);
+        renderer_set_blend_mode(renderer_instance, SDL_BLENDMODE_BLEND);
+        renderer_fill_rect(renderer_instance, &overlay, 0, 0, 0, darkness);
     }
 }
 
-static void bg_layer_draw_impl(void *impl, SDL_Renderer *renderer) {
+static void bg_layer_draw_impl(void *impl, renderer *renderer_instance) {
     bg_layer *bg = (bg_layer *)impl;
-    bg_layer_draw_one(renderer, bg->tex_sub, 0, bg->shake_sub_remaining_ms, bg->darkness_sub);
-    bg_layer_draw_one(renderer, bg->tex_main, WIDEBRIM_SCREEN_HEIGHT, bg->shake_main_remaining_ms, bg->darkness_main);
+    bg_layer_draw_one(renderer_instance, bg->tex_sub, 0, bg->shake_sub_remaining_ms, bg->darkness_sub);
+    bg_layer_draw_one(renderer_instance, bg->tex_main, WIDEBRIM_SCREEN_HEIGHT, bg->shake_main_remaining_ms,
+                     bg->darkness_main);
 }
 
 screen_layer bg_layer_as_screen_layer(bg_layer *bg) {

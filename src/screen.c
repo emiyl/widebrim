@@ -59,11 +59,11 @@ void screen_collection_update(screen_collection *sc, float dt_ms) {
     }
 }
 
-void screen_collection_draw(screen_collection *sc, SDL_Renderer *renderer) {
+void screen_collection_draw(screen_collection *sc, renderer *renderer_instance) {
     size_t i;
     for (i = 0; i < sc->count; ++i) {
         if (sc->layers[i].draw) {
-            sc->layers[i].draw(sc->layers[i].impl, renderer);
+            sc->layers[i].draw(sc->layers[i].impl, renderer_instance);
         }
     }
 }
