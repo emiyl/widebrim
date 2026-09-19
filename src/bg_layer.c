@@ -90,7 +90,7 @@ static void bg_layer_draw_one(renderer *renderer_instance, renderer_texture *tex
         overlay.y = (float)y_offset;
         overlay.w = (float)WIDEBRIM_SCREEN_WIDTH;
         overlay.h = (float)WIDEBRIM_SCREEN_HEIGHT;
-        renderer_set_blend_mode(renderer_instance, SDL_BLENDMODE_BLEND);
+        renderer_set_blend_mode(renderer_instance, WIDEBRIM_BLEND_MODE_BLEND);
         renderer_fill_rect(renderer_instance, &overlay, 0, 0, 0, darkness);
     }
 }

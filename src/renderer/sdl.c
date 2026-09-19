@@ -14,6 +14,17 @@ struct renderer_texture {
     SDL_Texture *texture;
 };
 
+static SDL_BlendMode sdl_blend_mode_from_widebrim(widebrim_blend_mode mode) {
+    switch (mode) {
+        case WIDEBRIM_BLEND_MODE_NONE:
+            return SDL_BLENDMODE_NONE;
+        case WIDEBRIM_BLEND_MODE_BLEND:
+            return SDL_BLENDMODE_BLEND;
+        default:
+            return SDL_BLENDMODE_BLEND;
+    }
+}
+
 static void sdl_renderer_register_texture(sdl_renderer_impl *impl, SDL_Texture *tex) {
     SDL_Texture **grown;
     size_t new_capacity;
@@ -104,18 +115,18 @@ static void sdl_renderer_fill_rect(renderer *renderer_instance, const SDL_FRect 
     SDL_RenderFillRect(impl->renderer, rect);
 }
 
-static void sdl_renderer_set_blend_mode(renderer *renderer_instance, SDL_BlendMode mode) {
+static void sdl_renderer_set_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
-    SDL_SetRenderDrawBlendMode(impl->renderer, mode);
+    SDL_SetRenderDrawBlendMode(impl->renderer, sdl_blend_mode_from_widebrim(mode));
 }
 
-static void sdl_renderer_set_global_texture_blend_mode(renderer *renderer_instance, SDL_BlendMode mode) {
+static void sdl_renderer_set_global_texture_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
     sdl_renderer_impl *impl = (sdl_renderer_impl *)renderer_instance->impl;
     size_t i;
 
-    impl->global_texture_blend_mode = mode;
+    impl->global_texture_blend_mode = sdl_blend_mode_from_widebrim(mode);
     for (i = 0; i < impl->texture_registry_count; ++i) {
-        SDL_SetTextureBlendMode(impl->texture_registry[i], mode);
+        SDL_SetTextureBlendMode(impl->texture_registry[i], impl->global_texture_blend_mode);
     }
 }
 

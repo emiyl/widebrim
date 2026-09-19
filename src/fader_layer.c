@@ -116,7 +116,7 @@ static void fader_layer_draw_rect(renderer *renderer_instance, const fader_timel
     rect.w = (float)WIDEBRIM_SCREEN_WIDTH;
     rect.h = (float)WIDEBRIM_SCREEN_HEIGHT;
 
-    renderer_set_blend_mode(renderer_instance, SDL_BLENDMODE_BLEND);
+    renderer_set_blend_mode(renderer_instance, WIDEBRIM_BLEND_MODE_BLEND);
     if (tl->flash_white) {
         renderer_fill_rect(renderer_instance, &rect, 255, 255, 255, alpha);
     } else {

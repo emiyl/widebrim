@@ -3,14 +3,28 @@
 
 #include <SDL3/SDL.h>
 
+#include "renderer.h"
+
 typedef struct window window;
+
+typedef enum {
+    WIDEBRIM_LOGICAL_PRESENTATION_DISABLED = 0,
+    WIDEBRIM_LOGICAL_PRESENTATION_STRETCH = 1,
+    WIDEBRIM_LOGICAL_PRESENTATION_LETTERBOX = 2,
+    WIDEBRIM_LOGICAL_PRESENTATION_OVERSCAN = 3,
+    WIDEBRIM_LOGICAL_PRESENTATION_INTEGER_SCALE = 4,
+} widebrim_logical_presentation;
+
+typedef enum {
+    WIDEBRIM_SCALE_MODE_NEAREST = 0,
+} widebrim_scale_mode;
 
 typedef struct window_vtable {
     void (*destroy)(window *window_instance);
-    void (*set_logical_presentation)(window *window_instance, int w, int h, SDL_RendererLogicalPresentation mode);
+    void (*set_logical_presentation)(window *window_instance, int w, int h, widebrim_logical_presentation mode);
     void (*set_scale)(window *window_instance, float x_scale, float y_scale);
-    void (*set_default_texture_scale_mode)(window *window_instance, SDL_ScaleMode mode);
-    void (*set_draw_blend_mode)(window *window_instance, SDL_BlendMode mode);
+    void (*set_default_texture_scale_mode)(window *window_instance, widebrim_scale_mode mode);
+    void (*set_draw_blend_mode)(window *window_instance, widebrim_blend_mode mode);
     void (*convert_event_to_render_coordinates)(window *window_instance, SDL_Event *event);
     SDL_Window *(*as_sdl_window)(const window *window_instance);
     SDL_Renderer *(*as_sdl_renderer)(const window *window_instance);
@@ -32,7 +46,7 @@ static inline void window_destroy(window *window_instance) {
 static inline void window_set_logical_presentation(window *window_instance,
                                                   int w,
                                                   int h,
-                                                  SDL_RendererLogicalPresentation mode) {
+                                                  widebrim_logical_presentation mode) {
     if (window_instance && window_instance->vt && window_instance->vt->set_logical_presentation) {
         window_instance->vt->set_logical_presentation(window_instance, w, h, mode);
     }
@@ -44,13 +58,13 @@ static inline void window_set_scale(window *window_instance, float x_scale, floa
     }
 }
 
-static inline void window_set_default_texture_scale_mode(window *window_instance, SDL_ScaleMode mode) {
+static inline void window_set_default_texture_scale_mode(window *window_instance, widebrim_scale_mode mode) {
     if (window_instance && window_instance->vt && window_instance->vt->set_default_texture_scale_mode) {
         window_instance->vt->set_default_texture_scale_mode(window_instance, mode);
     }
 }
 
-static inline void window_set_draw_blend_mode(window *window_instance, SDL_BlendMode mode) {
+static inline void window_set_draw_blend_mode(window *window_instance, widebrim_blend_mode mode) {
     if (window_instance && window_instance->vt && window_instance->vt->set_draw_blend_mode) {
         window_instance->vt->set_draw_blend_mode(window_instance, mode);
     }

@@ -7,6 +7,39 @@ typedef struct sdl_window_impl {
     SDL_Renderer *renderer;
 } sdl_window_impl;
 
+static SDL_RendererLogicalPresentation sdl_logical_presentation_from_widebrim(widebrim_logical_presentation mode) {
+    switch (mode) {
+        case WIDEBRIM_LOGICAL_PRESENTATION_DISABLED:
+            return SDL_LOGICAL_PRESENTATION_DISABLED;
+        case WIDEBRIM_LOGICAL_PRESENTATION_STRETCH:
+            return SDL_LOGICAL_PRESENTATION_STRETCH;
+        case WIDEBRIM_LOGICAL_PRESENTATION_LETTERBOX:
+            return SDL_LOGICAL_PRESENTATION_LETTERBOX;
+        case WIDEBRIM_LOGICAL_PRESENTATION_OVERSCAN:
+            return SDL_LOGICAL_PRESENTATION_OVERSCAN;
+        case WIDEBRIM_LOGICAL_PRESENTATION_INTEGER_SCALE:
+            return SDL_LOGICAL_PRESENTATION_INTEGER_SCALE;
+        default:
+            return SDL_LOGICAL_PRESENTATION_DISABLED;
+    }
+}
+
+static SDL_ScaleMode sdl_scale_mode_from_widebrim(widebrim_scale_mode mode) {
+    (void)mode;
+    return SDL_SCALEMODE_NEAREST;
+}
+
+static SDL_BlendMode sdl_blend_mode_from_widebrim(widebrim_blend_mode mode) {
+    switch (mode) {
+        case WIDEBRIM_BLEND_MODE_NONE:
+            return SDL_BLENDMODE_NONE;
+        case WIDEBRIM_BLEND_MODE_BLEND:
+            return SDL_BLENDMODE_BLEND;
+        default:
+            return SDL_BLENDMODE_BLEND;
+    }
+}
+
 static void sdl_window_destroy(window *window_instance) {
     sdl_window_impl *impl = (sdl_window_impl *)window_instance->impl;
 
@@ -27,10 +60,10 @@ static void sdl_window_destroy(window *window_instance) {
     free(window_instance);
 }
 
-static void sdl_window_set_logical_presentation(window *window_instance, int w, int h, SDL_RendererLogicalPresentation mode) {
+static void sdl_window_set_logical_presentation(window *window_instance, int w, int h, widebrim_logical_presentation mode) {
     sdl_window_impl *impl = (sdl_window_impl *)window_instance->impl;
     if (impl && impl->renderer) {
-        SDL_SetRenderLogicalPresentation(impl->renderer, w, h, mode);
+        SDL_SetRenderLogicalPresentation(impl->renderer, w, h, sdl_logical_presentation_from_widebrim(mode));
     }
 }
 
@@ -41,17 +74,17 @@ static void sdl_window_set_scale(window *window_instance, float x_scale, float y
     }
 }
 
-static void sdl_window_set_default_texture_scale_mode(window *window_instance, SDL_ScaleMode mode) {
+static void sdl_window_set_default_texture_scale_mode(window *window_instance, widebrim_scale_mode mode) {
     sdl_window_impl *impl = (sdl_window_impl *)window_instance->impl;
     if (impl && impl->renderer) {
-        SDL_SetDefaultTextureScaleMode(impl->renderer, mode);
+        SDL_SetDefaultTextureScaleMode(impl->renderer, sdl_scale_mode_from_widebrim(mode));
     }
 }
 
-static void sdl_window_set_draw_blend_mode(window *window_instance, SDL_BlendMode mode) {
+static void sdl_window_set_draw_blend_mode(window *window_instance, widebrim_blend_mode mode) {
     sdl_window_impl *impl = (sdl_window_impl *)window_instance->impl;
     if (impl && impl->renderer) {
-        SDL_SetRenderDrawBlendMode(impl->renderer, mode);
+        SDL_SetRenderDrawBlendMode(impl->renderer, sdl_blend_mode_from_widebrim(mode));
     }
 }
 

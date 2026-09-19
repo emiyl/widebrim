@@ -8,14 +8,19 @@
 typedef struct renderer_texture renderer_texture;
 typedef struct renderer renderer;
 
+typedef enum {
+    WIDEBRIM_BLEND_MODE_NONE = 0,
+    WIDEBRIM_BLEND_MODE_BLEND = 1,
+} widebrim_blend_mode;
+
 typedef struct renderer_vtable {
     void (*destroy_texture)(renderer *renderer, renderer_texture *texture);
     renderer_texture *(*create_texture_from_rgba)(renderer *renderer, const uint8_t *rgba, int width, int height);
     void (*draw_texture)(renderer *renderer, const renderer_texture *texture, const SDL_FRect *dst);
     void (*draw_rect)(renderer *renderer, const SDL_FRect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
     void (*fill_rect)(renderer *renderer, const SDL_FRect *rect, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-    void (*set_blend_mode)(renderer *renderer, SDL_BlendMode mode);
-    void (*set_global_texture_blend_mode)(renderer *renderer, SDL_BlendMode mode);
+    void (*set_blend_mode)(renderer *renderer, widebrim_blend_mode mode);
+    void (*set_global_texture_blend_mode)(renderer *renderer, widebrim_blend_mode mode);
     void (*clear)(renderer *renderer, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
     void (*present)(renderer *renderer);
     void (*get_texture_size)(renderer *renderer, const renderer_texture *texture, int *w, int *h);
@@ -35,13 +40,13 @@ static inline void renderer_destroy(renderer *renderer_instance) {
     }
 }
 
-static inline void renderer_set_blend_mode(renderer *renderer_instance, SDL_BlendMode mode) {
+static inline void renderer_set_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->set_blend_mode) {
         renderer_instance->vt->set_blend_mode(renderer_instance, mode);
     }
 }
 
-static inline void renderer_set_global_texture_blend_mode(renderer *renderer_instance, SDL_BlendMode mode) {
+static inline void renderer_set_global_texture_blend_mode(renderer *renderer_instance, widebrim_blend_mode mode) {
     if (renderer_instance && renderer_instance->vt && renderer_instance->vt->set_global_texture_blend_mode) {
         renderer_instance->vt->set_global_texture_blend_mode(renderer_instance, mode);
     }

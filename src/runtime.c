@@ -36,10 +36,10 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
         return -1;
     }
     window_set_logical_presentation(rt->window, WIDEBRIM_SCREEN_WIDTH, WIDEBRIM_SCREEN_HEIGHT * 2,
-                                   SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+                                   WIDEBRIM_LOGICAL_PRESENTATION_INTEGER_SCALE);
     window_set_scale(rt->window, 1.0f, 1.0f);
-    window_set_default_texture_scale_mode(rt->window, SDL_SCALEMODE_NEAREST);
-    window_set_draw_blend_mode(rt->window, SDL_BLENDMODE_BLEND);
+    window_set_default_texture_scale_mode(rt->window, WIDEBRIM_SCALE_MODE_NEAREST);
+    window_set_draw_blend_mode(rt->window, WIDEBRIM_BLEND_MODE_BLEND);
 
     if (game_state_init(&rt->state, datafiles_root, language) != 0) {
         fprintf(stderr, "widebrim: failed to initialize Datafiles access at '%s'\n", datafiles_root);
@@ -52,7 +52,7 @@ int widebrim_runtime_init(widebrim_runtime *rt, const char *datafiles_root, cons
     }
 
     mode_spawner_init(&rt->spawner, &rt->state, window_get_sdl_renderer(rt->window));
-    renderer_set_global_texture_blend_mode(rt->spawner.controller.renderer, SDL_BLENDMODE_BLEND);
+    renderer_set_global_texture_blend_mode(rt->spawner.controller.renderer, WIDEBRIM_BLEND_MODE_BLEND);
     game_state_set_mode(&rt->state, GAME_MODE_RESET);
 
     rt->engine_skip_clock_event_type = SDL_RegisterEvents(1);
@@ -105,9 +105,9 @@ void widebrim_runtime_run(widebrim_runtime *rt) {
             } else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_TAB) {
                 rt->alpha_blend_enabled = !rt->alpha_blend_enabled;
                 window_set_draw_blend_mode(rt->window,
-                                          rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
+                                          rt->alpha_blend_enabled ? WIDEBRIM_BLEND_MODE_BLEND : WIDEBRIM_BLEND_MODE_NONE);
                 renderer_set_global_texture_blend_mode(rt->spawner.controller.renderer,
-                                                      rt->alpha_blend_enabled ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
+                                                      rt->alpha_blend_enabled ? WIDEBRIM_BLEND_MODE_BLEND : WIDEBRIM_BLEND_MODE_NONE);
             } else if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
                 mode_spawner_handle_key(&rt->spawner, &event);
             } else if (event.type == rt->engine_skip_clock_event_type) {

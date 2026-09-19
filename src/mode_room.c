@@ -501,7 +501,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
     mode_room_impl *impl = (mode_room_impl *)implp;
     size_t i;
 
-    renderer_set_blend_mode(renderer_instance, SDL_BLENDMODE_BLEND);
+    renderer_set_blend_mode(renderer_instance, WIDEBRIM_BLEND_MODE_BLEND);
 
     SDL_FRect move_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
     SDL_FRect menu_toggle_rect = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -561,7 +561,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
                 renderer_draw_texture(impl->controller->renderer, sprite, &rect);
             } else {
                 /* no decoded sprite for this id_image - fall back to an outline so the hotspot stays visible */
-                renderer_set_blend_mode(impl->controller->renderer, SDL_BLENDMODE_BLEND);
+                renderer_set_blend_mode(impl->controller->renderer, WIDEBRIM_BLEND_MODE_BLEND);
                 renderer_draw_rect(impl->controller->renderer, &rect, 255, 255, 0, 160);
             }
         }
