@@ -54,6 +54,17 @@ typedef struct {
 } mode_room_exit_sprite_state;
 
 typedef struct {
+    renderer_texture **textures;
+    int *frame_widths;
+    int *frame_heights;
+    uint64_t *frame_durations_ms;
+    size_t frame_count;
+    uint64_t started_ms;
+    int x;
+    int y;
+} mode_room_bg_anim_state;
+
+typedef struct {
     renderer_texture *texture;
     int width;
     int height;
@@ -75,6 +86,8 @@ typedef struct {
     mode_room_icon_state menu_button;
     mode_room_icon_state camera_button;
     int highlighted_exit_index;
+    mode_room_bg_anim_state bg_animations[MH_PLACE_BGANI_COUNT];
+    size_t bg_animation_count;
     mode_room_exit_sprite_state exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
     mode_room_title_state title;
 } mode_room_impl;
@@ -284,6 +297,191 @@ static uint8_t mode_room_exit_sprite_alpha(uint64_t animation_start_ms, bool pre
     return (uint8_t)alpha;
 }
 
+static void mode_room_destroy_bg_animations(mode_room_impl *impl) {
+    size_t i;
+
+    for (i = 0; i < impl->bg_animation_count; ++i) {
+        mode_room_bg_anim_state *anim = &impl->bg_animations[i];
+        size_t j;
+
+        for (j = 0; j < anim->frame_count; ++j) {
+            if (anim->textures && anim->textures[j]) {
+                renderer_destroy_texture(impl->controller->renderer, anim->textures[j]);
+            }
+        }
+        free(anim->textures);
+        free(anim->frame_widths);
+        free(anim->frame_heights);
+        free(anim->frame_durations_ms);
+        anim->textures = NULL;
+        anim->frame_widths = NULL;
+        anim->frame_heights = NULL;
+        anim->frame_durations_ms = NULL;
+        anim->frame_count = 0u;
+        anim->started_ms = 0u;
+        anim->x = 0;
+        anim->y = 0;
+    }
+    impl->bg_animation_count = 0u;
+}
+
+static const mh_anim_animation *mode_room_select_bg_animation(const mh_anim_image *image) {
+    const mh_anim_animation *selected = NULL;
+    const mh_anim_animation *fallback = NULL;
+    size_t i;
+
+    if (!image) {
+        return NULL;
+    }
+    for (i = 0; i < image->animation_count; ++i) {
+        const mh_anim_animation *candidate = &image->animations[i];
+        if (candidate->keyframe_count == 0u && candidate->first_frame_index < 0) {
+            continue;
+        }
+        if (strcmp(candidate->name, "default") == 0) {
+            return candidate;
+        }
+        if (strcmp(candidate->name, "0") == 0 || strcmp(candidate->name, "1") == 0 || strcmp(candidate->name, "2") == 0) {
+            if (!selected) {
+                selected = candidate;
+            }
+            continue;
+        }
+        if (!fallback) {
+            fallback = candidate;
+        }
+    }
+    return selected ? selected : fallback;
+}
+
+static void mode_room_bg_anim_asset_name(char *out, size_t out_size, const char *raw_name) {
+    size_t len;
+    char cleaned[64];
+
+    if (!out || out_size == 0u || !raw_name) {
+        return;
+    }
+    snprintf(cleaned, sizeof(cleaned), "%s", raw_name);
+    len = strlen(cleaned);
+    while (len > 0u && (cleaned[len - 1u] == ' ' || cleaned[len - 1u] == '\t' || cleaned[len - 1u] == '\n' ||
+                       cleaned[len - 1u] == '\r' || cleaned[len - 1u] == '\0')) {
+        cleaned[--len] = '\0';
+    }
+    if (len >= 4u && strcmp(cleaned + len - 4u, ".spr") == 0) {
+        cleaned[len - 4u] = '\0';
+    }
+    if (len >= 4u && strcmp(cleaned + len - 4u, ".arc") == 0) {
+        cleaned[len - 4u] = '\0';
+    }
+    snprintf(out, out_size, "%s", cleaned);
+}
+
+static void mode_room_load_bg_animations(mode_room_impl *impl) {
+    size_t i;
+
+    mode_room_destroy_bg_animations(impl);
+    for (i = 0; i < impl->place.bg_ani_count; ++i) {
+        const mh_place_bg_ani *entry = &impl->place.bg_ani[i];
+        char asset_name[64];
+        char path[64];
+        mh_buffer data;
+        mh_anim_image anim;
+        const mh_anim_animation *selected = NULL;
+        size_t frame_count = 0u;
+        size_t frame_index;
+        mode_room_bg_anim_state *bg;
+
+        memset(&anim, 0, sizeof(anim));
+        mode_room_bg_anim_asset_name(asset_name, sizeof(asset_name), entry->name);
+        snprintf(path, sizeof(path), "ani/bgani/%s.arc", asset_name);
+
+        mh_buffer_init(&data);
+        if (mh_datafiles_get_data(&impl->state->datafiles, path, &data) != 0) {
+            continue;
+        }
+        if (mh_anim_decode_arc(data.data, data.len, &anim) != 0) {
+            mh_buffer_free(&data);
+            continue;
+        }
+        mh_buffer_free(&data);
+
+        selected = mode_room_select_bg_animation(&anim);
+        if (!selected) {
+            mh_anim_free(&anim);
+            continue;
+        }
+        if (selected->keyframe_count > 0u) {
+            frame_count = selected->keyframe_count;
+        } else if (selected->first_frame_index >= 0) {
+            frame_count = 1u;
+        } else {
+            mh_anim_free(&anim);
+            continue;
+        }
+
+        bg = &impl->bg_animations[impl->bg_animation_count++];
+        bg->textures = (renderer_texture **)calloc(frame_count ? frame_count : 1u, sizeof(*bg->textures));
+        bg->frame_widths = (int *)calloc(frame_count ? frame_count : 1u, sizeof(*bg->frame_widths));
+        bg->frame_heights = (int *)calloc(frame_count ? frame_count : 1u, sizeof(*bg->frame_heights));
+        bg->frame_durations_ms = (uint64_t *)calloc(frame_count ? frame_count : 1u, sizeof(*bg->frame_durations_ms));
+        bg->frame_count = frame_count;
+        bg->started_ms = platform_time_get_ticks();
+        bg->x = entry->x;
+        bg->y = entry->y;
+
+        for (frame_index = 0; frame_index < frame_count; ++frame_index) {
+            int frame_id = 0;
+            const mh_anim_frame *frame = NULL;
+            uint32_t duration_frames = 0u;
+            if (selected->keyframe_count > 0u) {
+                frame_id = selected->keyframes[frame_index].frame_index;
+                duration_frames = selected->keyframes[frame_index].duration_frames;
+            } else {
+                frame_id = selected->first_frame_index;
+            }
+            bg->frame_durations_ms[frame_index] = (duration_frames == 0u) ? 16u : (((uint64_t)duration_frames * 1000u) / 60u);
+            if (frame_id >= 0 && (size_t)frame_id < anim.frame_count) {
+                frame = &anim.frames[frame_id];
+            }
+            if (frame) {
+                bg->textures[frame_index] = renderer_create_texture_from_rgba(impl->controller->renderer,
+                                                                             frame->pixels, frame->width, frame->height);
+                bg->frame_widths[frame_index] = frame->width;
+                bg->frame_heights[frame_index] = frame->height;
+            } else {
+                bg->frame_widths[frame_index] = 0;
+                bg->frame_heights[frame_index] = 0;
+            }
+        }
+        mh_anim_free(&anim);
+    }
+}
+
+static size_t mode_room_bg_animation_frame_index(const mode_room_bg_anim_state *state, uint64_t now_ms) {
+    size_t i;
+    uint64_t elapsed_ms;
+    uint64_t total_duration_ms = 0u;
+
+    if (!state || state->frame_count == 0u || !state->textures) {
+        return 0u;
+    }
+    for (i = 0; i < state->frame_count; ++i) {
+        total_duration_ms += state->frame_durations_ms ? state->frame_durations_ms[i] : 16u;
+    }
+    if (total_duration_ms == 0u) {
+        return 0u;
+    }
+    elapsed_ms = (now_ms - state->started_ms) % total_duration_ms;
+    for (i = 0; i < state->frame_count; ++i) {
+        uint64_t duration_ms = state->frame_durations_ms ? state->frame_durations_ms[i] : 16u;
+        if (elapsed_ms < duration_ms) {
+            return i;
+        }
+        elapsed_ms -= duration_ms;
+    }
+    return 0u;
+}
+
 static void mode_room_set_move_mode(mode_room_impl *impl, bool enabled) {
     impl->in_move_mode = enabled;
     impl->highlighted_exit_index = -1;
@@ -372,6 +570,7 @@ static bool mode_room_load_current(mode_room_impl *impl) {
     snprintf(bg_map_path, sizeof(bg_map_path), "bg/map/map%u.arc", impl->place.bg_map_id);
     bg_loader_load(impl->state, impl->controller, bg_main_path, screen_controller_set_bg_main);
     bg_loader_load(impl->state, impl->controller, bg_map_path, screen_controller_set_bg_sub);
+    mode_room_load_bg_animations(impl);
     mode_room_load_title_text(impl);
     return true;
 }
@@ -587,6 +786,25 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         camera_toggle_rect.h = (float)h;
     }
 
+    for (i = 0; i < impl->bg_animation_count; ++i) {
+        const mode_room_bg_anim_state *bg = &impl->bg_animations[i];
+        size_t frame_index = mode_room_bg_animation_frame_index(bg, platform_time_get_ticks());
+        renderer_texture *frame_texture = bg->textures ? bg->textures[frame_index] : NULL;
+        wb_rect rect;
+
+        if (!frame_texture) {
+            continue;
+        }
+        rect.x = (float)bg->x;
+        rect.y = (float)(bg->y + (int)WB_SCREEN_HEIGHT);
+        rect.w = (float)(bg->frame_widths ? bg->frame_widths[frame_index] : 0);
+        rect.h = (float)(bg->frame_heights ? bg->frame_heights[frame_index] : 0);
+        if (rect.w <= 0.0f || rect.h <= 0.0f) {
+            continue;
+        }
+        renderer_draw_texture(impl->controller->renderer, frame_texture, &rect);
+    }
+
     if (impl->in_move_mode) {
         if (impl->highlighted_exit_index >= 0) {
             const mh_place_exit *exit = &impl->place.exits[impl->highlighted_exit_index];
@@ -708,6 +926,7 @@ static void mode_room_destroy(void *implp) {
     mode_room_impl *impl = (mode_room_impl *)implp;
     int i;
 
+    mode_room_destroy_bg_animations(impl);
     for (i = 0; i < MODE_ROOM_EXIT_IMAGE_COUNT; ++i) {
         if (impl->exit_sprites[i].texture) {
             renderer_destroy_texture(impl->controller->renderer, impl->exit_sprites[i].texture);
@@ -779,6 +998,8 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->camera_button.texture_on = NULL;
     impl->camera_button.texture_click = NULL;
     impl->highlighted_exit_index = -1;
+    impl->bg_animation_count = 0u;
+    memset(impl->bg_animations, 0, sizeof(impl->bg_animations));
     impl->title.texture = NULL;
     impl->title.width = 0;
     impl->title.height = 0;
