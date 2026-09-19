@@ -76,6 +76,18 @@ typedef struct {
     int height;
 } mode_room_event_sprite_state;
 
+typedef struct {
+    renderer_texture **textures;
+    int *frame_widths;
+    int *frame_heights;
+    uint64_t *frame_durations_ms;
+    size_t frame_count;
+    uint64_t started_ms;
+    int x;
+    int y;
+    bool active;
+} mode_room_hint_coin_effect_state;
+
 // simplified roomplayer, shows room's top/bottom background and lets the player
 // click through rooms. NPCs, party members, tea events, photo pieces and 
 // tobj popups are all deferred as they need event scripting
@@ -96,6 +108,7 @@ typedef struct {
     size_t bg_animation_count;
     mode_room_exit_sprite_state exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
     mode_room_event_sprite_state event_sprites[MH_PLACE_EVENT_COUNT];
+    mode_room_hint_coin_effect_state hint_coin_effect;
     mode_room_title_state title;
 } mode_room_impl;
 
@@ -164,6 +177,134 @@ static int mode_room_find_exit_index_at_point(mode_room_impl *impl, float x, flo
         }
     }
     return -1;
+}
+
+static int mode_room_find_hint_coin_index_at_point(mode_room_impl *impl, float x, float y) {
+    size_t i;
+
+    for (i = 0; i < impl->place.hint_coin_count; ++i) {
+        const mh_place_hint_coin *hint = &impl->place.hint_coins[i];
+        if (mode_room_point_in_rect(x, y, &hint->bounding)) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+static const mh_anim_animation *mode_room_select_bg_animation(const mh_anim_image *image);
+
+static void mode_room_destroy_hint_coin_effect(mode_room_impl *impl) {
+    size_t i;
+    mode_room_hint_coin_effect_state *effect = &impl->hint_coin_effect;
+
+    if (!effect->textures) {
+        return;
+    }
+    for (i = 0; i < effect->frame_count; ++i) {
+        if (effect->textures[i]) {
+            renderer_destroy_texture(impl->controller->renderer, effect->textures[i]);
+        }
+    }
+    free(effect->textures);
+    free(effect->frame_widths);
+    free(effect->frame_heights);
+    free(effect->frame_durations_ms);
+    memset(effect, 0, sizeof(*effect));
+}
+
+static size_t mode_room_hint_coin_frame_index(const mode_room_hint_coin_effect_state *state, uint64_t now_ms) {
+    size_t i;
+    uint64_t elapsed_ms;
+    uint64_t total_duration_ms = 0u;
+
+    if (!state || state->frame_count == 0u || !state->textures) {
+        return 0u;
+    }
+    for (i = 0; i < state->frame_count; ++i) {
+        total_duration_ms += state->frame_durations_ms ? state->frame_durations_ms[i] : 16u;
+    }
+    if (total_duration_ms == 0u) {
+        return 0u;
+    }
+    elapsed_ms = (now_ms - state->started_ms) % total_duration_ms;
+    for (i = 0; i < state->frame_count; ++i) {
+        uint64_t duration_ms = state->frame_durations_ms ? state->frame_durations_ms[i] : 16u;
+        if (elapsed_ms < duration_ms) {
+            return i;
+        }
+        elapsed_ms -= duration_ms;
+    }
+    return state->frame_count - 1u;
+}
+
+static void mode_room_load_hint_coin_effect(mode_room_impl *impl) {
+    mode_room_hint_coin_effect_state *effect = &impl->hint_coin_effect;
+    char path[64];
+    mh_buffer data;
+    mh_anim_image anim;
+    const mh_anim_animation *selected = NULL;
+    size_t frame_count = 0u;
+    size_t frame_index;
+
+    mode_room_destroy_hint_coin_effect(impl);
+    memset(effect, 0, sizeof(*effect));
+
+    snprintf(path, sizeof(path), "ani/map/hintcoin.arc");
+    mh_buffer_init(&data);
+    if (mh_datafiles_get_data(&impl->state->datafiles, path, &data) != 0) {
+        mh_buffer_free(&data);
+        return;
+    }
+    memset(&anim, 0, sizeof(anim));
+    if (mh_anim_decode_arc(data.data, data.len, &anim) != 0) {
+        mh_buffer_free(&data);
+        return;
+    }
+    mh_buffer_free(&data);
+
+    selected = mode_room_select_bg_animation(&anim);
+    if (!selected) {
+        mh_anim_free(&anim);
+        return;
+    }
+    if (selected->keyframe_count > 0u) {
+        frame_count = selected->keyframe_count;
+    } else if (selected->first_frame_index >= 0) {
+        frame_count = 1u;
+    } else {
+        mh_anim_free(&anim);
+        return;
+    }
+
+    effect->textures = (renderer_texture **)calloc(frame_count ? frame_count : 1u, sizeof(*effect->textures));
+    effect->frame_widths = (int *)calloc(frame_count ? frame_count : 1u, sizeof(*effect->frame_widths));
+    effect->frame_heights = (int *)calloc(frame_count ? frame_count : 1u, sizeof(*effect->frame_heights));
+    effect->frame_durations_ms = (uint64_t *)calloc(frame_count ? frame_count : 1u, sizeof(*effect->frame_durations_ms));
+    effect->frame_count = frame_count;
+
+    for (frame_index = 0; frame_index < frame_count; ++frame_index) {
+        int frame_id = 0;
+        const mh_anim_frame *frame = NULL;
+        uint32_t duration_frames = 0u;
+        if (selected->keyframe_count > 0u) {
+            frame_id = selected->keyframes[frame_index].frame_index;
+            duration_frames = selected->keyframes[frame_index].duration_frames;
+        } else {
+            frame_id = selected->first_frame_index;
+        }
+        effect->frame_durations_ms[frame_index] = (duration_frames == 0u) ? 16u : (((uint64_t)duration_frames * 1000u) / 60u);
+        if (frame_id >= 0 && (size_t)frame_id < anim.frame_count) {
+            frame = &anim.frames[frame_id];
+        }
+        if (frame) {
+            effect->textures[frame_index] = renderer_create_texture_from_rgba(impl->controller->renderer,
+                                                                             frame->pixels, frame->width, frame->height);
+            effect->frame_widths[frame_index] = frame->width;
+            effect->frame_heights[frame_index] = frame->height;
+        }
+    }
+
+    mh_anim_free(&anim);
 }
 
 static bool mode_room_button_rect_contains_point(int x, int y, int rect_x, int rect_y, int rect_w, int rect_h) {
@@ -644,6 +785,7 @@ static bool mode_room_load_current(mode_room_impl *impl) {
     bg_loader_load(impl->state, impl->controller, bg_map_path, screen_controller_set_bg_sub);
     mode_room_load_bg_animations(impl);
     mode_room_load_event_sprites(impl);
+    mode_room_load_hint_coin_effect(impl);
     mode_room_load_title_text(impl);
     return true;
 }
@@ -756,6 +898,33 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
                         game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
                         impl->done = true;
                         return true;
+                    }
+                }
+
+                {
+                    int hint_index = mode_room_find_hint_coin_index_at_point(impl, x, y);
+                    if (hint_index >= 0) {
+                        int place_num = game_state_get_place_num(impl->state);
+                        if (!game_state_room_hint_coin_found(impl->state, place_num, hint_index)) {
+                            const mh_place_hint_coin *coin = &impl->place.hint_coins[hint_index];
+                            game_state_hint_coin_mark_found(impl->state, place_num, hint_index);
+                            impl->hint_coin_effect.active = true;
+                            impl->hint_coin_effect.started_ms = platform_time_get_ticks();
+                            impl->hint_coin_effect.x = (int)(coin->bounding.x + coin->bounding.width / 2);
+                            impl->hint_coin_effect.y = (int)(coin->bounding.y + coin->bounding.height / 2) + WB_SCREEN_HEIGHT;
+                            fprintf(stderr,
+                                    "widebrim: collected hint coin %d in room %d; total encountered=%u available=%u\n",
+                                    hint_index, place_num,
+                                    (unsigned)impl->state->hint_coin_encountered,
+                                    (unsigned)impl->state->hint_coin_available);
+                            if (place_num == 3 && hint_index == 0) {
+                                game_state_set_event_id(impl->state, 10080);
+                                game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
+                                game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
+                                impl->done = true;
+                            }
+                            return true;
+                        }
                     }
                 }
 
@@ -1019,6 +1188,49 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
 
     }
 
+    if (impl->hint_coin_effect.active && impl->hint_coin_effect.frame_count > 0u) {
+        const uint64_t now_ms = platform_time_get_ticks();
+        size_t frame_index = mode_room_hint_coin_frame_index(&impl->hint_coin_effect, now_ms);
+        renderer_texture *frame = impl->hint_coin_effect.textures ? impl->hint_coin_effect.textures[frame_index] : NULL;
+        uint64_t total_duration_ms = 0u;
+        uint64_t elapsed_ms;
+        float progress;
+        float y_offset = 0.0f;
+        size_t i;
+
+        for (i = 0; i < impl->hint_coin_effect.frame_count; ++i) {
+            total_duration_ms += impl->hint_coin_effect.frame_durations_ms ? impl->hint_coin_effect.frame_durations_ms[i] : 16u;
+        }
+        if (total_duration_ms == 0u) {
+            total_duration_ms = 220u;
+        }
+
+        elapsed_ms = now_ms - impl->hint_coin_effect.started_ms;
+        progress = (float)elapsed_ms / (float)total_duration_ms;
+        if (progress < 0.0f) {
+            progress = 0.0f;
+        }
+        if (progress <= 0.50f) {
+            y_offset = -26.0f * sinf(progress / 0.50f * (float)M_PI / 2.0f);
+        } else {
+            y_offset = -26.0f * cosf((progress - 0.50f) / 0.50f * (float)M_PI / 2.0f);
+        }
+
+        if (frame) {
+            wb_rect rect;
+            int w = impl->hint_coin_effect.frame_widths ? impl->hint_coin_effect.frame_widths[frame_index] : 0;
+            int h = impl->hint_coin_effect.frame_heights ? impl->hint_coin_effect.frame_heights[frame_index] : 0;
+            rect.x = (float)(impl->hint_coin_effect.x - w / 2);
+            rect.y = (float)(impl->hint_coin_effect.y - h / 2 + y_offset);
+            rect.w = (float)w;
+            rect.h = (float)h;
+            renderer_draw_texture(impl->controller->renderer, frame, &rect);
+        }
+        if (elapsed_ms >= total_duration_ms) {
+            impl->hint_coin_effect.active = false;
+        }
+    }
+
     if (impl->title.texture) {
         wb_rect rect;
         rect.x = (float)(MODE_ROOM_TITLE_CENTER_X - impl->title.width / 2);
@@ -1038,6 +1250,7 @@ static void mode_room_destroy(void *implp) {
     int i;
 
     mode_room_destroy_bg_animations(impl);
+    mode_room_destroy_hint_coin_effect(impl);
     for (i = 0; i < MH_PLACE_EVENT_COUNT; ++i) {
         if (impl->event_sprites[i].texture) {
             renderer_destroy_texture(impl->controller->renderer, impl->event_sprites[i].texture);
@@ -1117,6 +1330,7 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->bg_animation_count = 0u;
     memset(impl->bg_animations, 0, sizeof(impl->bg_animations));
     memset(impl->event_sprites, 0, sizeof(impl->event_sprites));
+    memset(&impl->hint_coin_effect, 0, sizeof(impl->hint_coin_effect));
     impl->title.texture = NULL;
     impl->title.width = 0;
     impl->title.height = 0;

@@ -2,6 +2,7 @@
 #define WIDEBRIM_GAME_STATE_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <mh_datafiles.h>
 #include <mh_font.h>
@@ -15,6 +16,9 @@ typedef struct {
     int place_num;
     int event_id;
     bool first_touch_enabled;
+    uint8_t room_hint_data[64];
+    uint16_t hint_coin_encountered;
+    uint16_t hint_coin_available;
     mh_font font_event;
     bool font_event_loaded;
 } game_state;
@@ -34,5 +38,9 @@ int game_state_get_place_num(const game_state *gs);
 void game_state_set_place_num(game_state *gs, int place_num);
 int game_state_get_event_id(const game_state *gs);
 void game_state_set_event_id(game_state *gs, int event_id);
+
+bool game_state_room_hint_coin_found(const game_state *gs, int room_num, int coin_index);
+void game_state_room_hint_coin_set_found(game_state *gs, int room_num, int coin_index);
+void game_state_hint_coin_mark_found(game_state *gs, int room_num, int coin_index);
 
 #endif

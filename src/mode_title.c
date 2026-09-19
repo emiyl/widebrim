@@ -24,7 +24,7 @@ static bool mode_title_advance(mode_title_impl *impl) {
         return false;
     }
     
-    game_state_set_place_num(impl->state, 1);
+    game_state_set_place_num(impl->state, 8);
     game_state_set_mode(impl->state, GAME_MODE_ROOM);
     impl->done = true;
     return true;
