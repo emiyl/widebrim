@@ -4,6 +4,12 @@ project(widebrim C)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/madhatter/src" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/madhatter/include")
+    message(FATAL_ERROR
+        "The madhatter submodule is missing. Run: git submodule update --init --recursive"
+    )
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL3 REQUIRED sdl3)
 
