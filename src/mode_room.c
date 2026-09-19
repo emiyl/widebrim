@@ -46,6 +46,7 @@ typedef struct {
     int pending_place_num;
     bool done;
     bool in_move_mode;
+    bool move_toggle_pressed;
     int highlighted_exit_index;
     SDL_Texture *exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
     SDL_Texture *exit_sprites_highlighted[MODE_ROOM_EXIT_IMAGE_COUNT];
@@ -347,25 +348,54 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
         return true;
     }
 
-    if (event->type != SDL_EVENT_MOUSE_BUTTON_DOWN) {
-        return false;
-    }
-    x = event->button.x;
-    y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        x = event->button.x;
+        y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
 
-    if (mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y)) {
-        mode_room_set_move_mode(impl, !impl->in_move_mode);
-        return true;
+        if (mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y)) {
+            impl->move_toggle_pressed = true;
+            return true;
+        }
+        impl->move_toggle_pressed = false;
+
+        if (mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y)) {
+            fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
+            mode_room_set_move_mode(impl, false);
+            return true;
+        }
+        if (mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y)) {
+            fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
+            mode_room_set_move_mode(impl, false);
+            return true;
+        }
     }
-    if (mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y)) {
-        fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
-        mode_room_set_move_mode(impl, false);
-        return true;
+
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+        x = event->button.x;
+        y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+
+        if (impl->move_toggle_pressed && mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y)) {
+            mode_room_set_move_mode(impl, !impl->in_move_mode);
+            impl->move_toggle_pressed = false;
+            return true;
+        }
+
+        impl->move_toggle_pressed = false;
+
+        if (mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y)) {
+            fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
+            mode_room_set_move_mode(impl, false);
+            return true;
+        }
+        if (mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y)) {
+            fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
+            mode_room_set_move_mode(impl, false);
+            return true;
+        }
     }
-    if (mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y)) {
-        fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
-        mode_room_set_move_mode(impl, false);
-        return true;
+
+    if (event->type != SDL_EVENT_MOUSE_BUTTON_DOWN && event->type != SDL_EVENT_MOUSE_BUTTON_UP) {
+        return false;
     }
 
     if (impl->in_move_mode) {
@@ -563,6 +593,7 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->pending_place_num = 0;
     impl->done = false;
     impl->in_move_mode = false;
+    impl->move_toggle_pressed = false;
     impl->highlighted_exit_index = -1;
     impl->move_button_texture = NULL;
     impl->menu_button_texture = NULL;
