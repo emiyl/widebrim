@@ -100,6 +100,10 @@ static void sdl_window_convert_event_to_render_coordinates(window *window_instan
     }
 
     memset(&sdl_event, 0, sizeof(sdl_event));
+    sdl_event.button.windowID = SDL_GetWindowID(impl->window);
+    sdl_event.motion.windowID = SDL_GetWindowID(impl->window);
+    sdl_event.key.windowID = SDL_GetWindowID(impl->window);
+
     switch (event->type) {
         case WB_INPUT_EVENT_QUIT:
             sdl_event.type = SDL_EVENT_QUIT;
