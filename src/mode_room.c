@@ -458,31 +458,6 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
         camera_toggle_rect.h = (float)h;
     }
 
-    if (impl->move_button_texture) {
-        SDL_RenderTexture(renderer, impl->move_button_texture, NULL, &move_toggle_rect);
-    } else {
-        SDL_SetRenderDrawColor(renderer, 42, 255, 180, 220);
-        SDL_RenderFillRect(renderer, &move_toggle_rect);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderRect(renderer, &move_toggle_rect);
-    }
-    if (impl->menu_button_texture) {
-        SDL_RenderTexture(renderer, impl->menu_button_texture, NULL, &menu_toggle_rect);
-    } else {
-        SDL_SetRenderDrawColor(renderer, 90, 160, 255, 220);
-        SDL_RenderFillRect(renderer, &menu_toggle_rect);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderRect(renderer, &menu_toggle_rect);
-    }
-    if (impl->camera_button_texture) {
-        SDL_RenderTexture(renderer, impl->camera_button_texture, NULL, &camera_toggle_rect);
-    } else {
-        SDL_SetRenderDrawColor(renderer, 255, 170, 60, 220);
-        SDL_RenderFillRect(renderer, &camera_toggle_rect);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderRect(renderer, &camera_toggle_rect);
-    }
-
     if (impl->in_move_mode) {
         for (i = 0; i < impl->place.exit_count; ++i) {
             const mh_place_exit *exit = &impl->place.exits[i];
@@ -509,6 +484,31 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
                 SDL_SetRenderDrawColor(renderer, 255, 255, 0, 160);
                 SDL_RenderRect(renderer, &rect);
             }
+        }
+    } else {
+        if (impl->move_button_texture) {
+            SDL_RenderTexture(renderer, impl->move_button_texture, NULL, &move_toggle_rect);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 42, 255, 180, 220);
+            SDL_RenderFillRect(renderer, &move_toggle_rect);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderRect(renderer, &move_toggle_rect);
+        }
+        if (impl->menu_button_texture) {
+            SDL_RenderTexture(renderer, impl->menu_button_texture, NULL, &menu_toggle_rect);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 90, 160, 255, 220);
+            SDL_RenderFillRect(renderer, &menu_toggle_rect);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderRect(renderer, &menu_toggle_rect);
+        }
+        if (impl->camera_button_texture) {
+            SDL_RenderTexture(renderer, impl->camera_button_texture, NULL, &camera_toggle_rect);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 255, 170, 60, 220);
+            SDL_RenderFillRect(renderer, &camera_toggle_rect);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderRect(renderer, &camera_toggle_rect);
         }
     }
 
