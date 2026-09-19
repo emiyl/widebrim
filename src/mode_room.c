@@ -345,164 +345,139 @@ static bool mode_room_handle_touch(void *implp, const SDL_Event *event) {
     float x, y;
     int exit_index;
 
-    if (event->type == SDL_EVENT_MOUSE_MOTION) {
-        if (!impl->in_move_mode) {
-            bool move_hovered = mode_room_toggle_rect_contains_point(impl, event->motion.x, event->motion.y);
-            bool menu_hovered = mode_room_menu_rect_contains_point(impl, event->motion.x, event->motion.y);
-            bool camera_hovered = mode_room_camera_rect_contains_point(impl, event->motion.x, event->motion.y);
-
-            impl->move_button.hovered = move_hovered;
-            impl->menu_button.hovered = menu_hovered;
-            impl->camera_button.hovered = camera_hovered;
-
-            if (impl->move_button.pressed || impl->menu_button.pressed || impl->camera_button.pressed ||
-                impl->move_button.release_frames > 0 || impl->menu_button.release_frames > 0 ||
-                impl->camera_button.release_frames > 0 || move_hovered || menu_hovered || camera_hovered) {
-                return true;
+    switch (event->type) {
+        case SDL_EVENT_MOUSE_MOTION:
+            if (impl->in_move_mode) {
+                x = event->motion.x;
+                y = event->motion.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+                exit_index = mode_room_find_exit_index_at_point(impl, x, y);
+                if (exit_index != impl->highlighted_exit_index) {
+                    impl->highlighted_exit_index = exit_index;
+                    return true;
+                }
+                return false;
             }
-            return false;
-        }
-        x = event->motion.x;
-        y = event->motion.y - (float)WIDEBRIM_SCREEN_HEIGHT;
-        exit_index = mode_room_find_exit_index_at_point(impl, x, y);
-        if (exit_index != impl->highlighted_exit_index) {
-            impl->highlighted_exit_index = exit_index;
-        }
-        return true;
-    }
 
-    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-        bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
-        bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
-        bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
-        x = event->button.x;
-        y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+            {
+                bool move_hovered = mode_room_toggle_rect_contains_point(impl, event->motion.x, event->motion.y);
+                bool menu_hovered = mode_room_menu_rect_contains_point(impl, event->motion.x, event->motion.y);
+                bool camera_hovered = mode_room_camera_rect_contains_point(impl, event->motion.x, event->motion.y);
 
-        impl->move_button.release_frames = 0;
-        impl->menu_button.release_frames = 0;
-        impl->camera_button.release_frames = 0;
+                impl->move_button.hovered = move_hovered;
+                impl->menu_button.hovered = menu_hovered;
+                impl->camera_button.hovered = camera_hovered;
 
-        if (move_hit) {
-            impl->move_button.pressed = true;
-            impl->move_button.hovered = true;
-            return true;
-        }
-        impl->move_button.pressed = false;
-        impl->move_button.hovered = false;
-
-        if (menu_hit) {
-            impl->menu_button.pressed = true;
-            impl->menu_button.hovered = true;
-            fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
-            return true;
-        }
-        impl->menu_button.pressed = false;
-        impl->menu_button.hovered = false;
-        if (camera_hit) {
-            impl->camera_button.pressed = true;
-            impl->camera_button.hovered = true;
-            fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
-            return true;
-        }
-        impl->camera_button.pressed = false;
-        impl->camera_button.hovered = false;
-    }
-
-    if (event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
-        bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
-        bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
-        bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
-        x = event->button.x;
-        y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
-
-        if (impl->move_button.pressed || move_hit) {
-            impl->move_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
-            impl->move_button.pending_mode = !impl->in_move_mode;
-            impl->move_button.pressed = false;
-            impl->move_button.hovered = false;
-            return true;
-        }
-
-        impl->move_button.pressed = false;
-        impl->move_button.hovered = false;
-        impl->move_button.release_frames = 0;
-
-        if (impl->menu_button.pressed || menu_hit) {
-            impl->menu_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
-            impl->menu_button.pending_mode = false;
-            impl->menu_button.pressed = false;
-            impl->menu_button.hovered = false;
-            fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
-            return true;
-        }
-        impl->menu_button.pressed = false;
-        impl->menu_button.hovered = false;
-        impl->menu_button.release_frames = 0;
-        impl->menu_button.pending_mode = false;
-        if (impl->camera_button.pressed || camera_hit) {
-            impl->camera_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
-            impl->camera_button.pending_mode = false;
-            impl->camera_button.pressed = false;
-            impl->camera_button.hovered = false;
-            fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
-            return true;
-        }
-        impl->camera_button.pressed = false;
-        impl->camera_button.hovered = false;
-        impl->camera_button.release_frames = 0;
-        impl->camera_button.pending_mode = false;
-    }
-
-    if (event->type != SDL_EVENT_MOUSE_BUTTON_DOWN && event->type != SDL_EVENT_MOUSE_BUTTON_UP) {
-        return false;
-    }
-
-    if (impl->in_move_mode) {
-        exit_index = mode_room_find_exit_index_at_point(impl, x, y);
-        if (exit_index >= 0) {
-            const mh_place_exit *exit = &impl->place.exits[exit_index];
-            if (mh_place_exit_can_spawn_event(exit)) {
-                fprintf(stderr,
-                        "widebrim: exit %d triggers a scripted event (mode_decoding=%u); "
-                        "switching to DramaEvent\n",
-                        exit_index, exit->mode_decoding);
-                game_state_set_event_id(impl->state, exit->spawn_data);
-                game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
-                game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
-                impl->done = true;
-                return true;
+                if (impl->move_button.pressed || impl->menu_button.pressed || impl->camera_button.pressed ||
+                    impl->move_button.release_frames > 0 || impl->menu_button.release_frames > 0 ||
+                    impl->camera_button.release_frames > 0 || move_hovered || menu_hovered || camera_hovered) {
+                    return true;
+                }
+                return false;
             }
-            impl->pending_place_num = exit->spawn_data;
-            mode_room_set_move_mode(impl, false);
-            screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
-                                        mode_room_on_transition_fade_done, impl);
-            return true;
-        }
-        mode_room_set_move_mode(impl, false);
-        return true;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            if (impl->in_move_mode) {
+                x = event->button.x;
+                y = event->button.y - (float)WIDEBRIM_SCREEN_HEIGHT;
+                exit_index = mode_room_find_exit_index_at_point(impl, x, y);
+                if (exit_index >= 0) {
+                    const mh_place_exit *exit = &impl->place.exits[exit_index];
+                    if (mh_place_exit_can_spawn_event(exit)) {
+                        fprintf(stderr,
+                                "widebrim: exit %d triggers a scripted event (mode_decoding=%u); "
+                                "switching to DramaEvent\n",
+                                exit_index, exit->mode_decoding);
+                        game_state_set_event_id(impl->state, exit->spawn_data);
+                        game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
+                        game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
+                        impl->done = true;
+                        return true;
+                    }
+                    impl->pending_place_num = exit->spawn_data;
+                    screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
+                                                mode_room_on_transition_fade_done, impl);
+                    return true;
+                }
+
+                mode_room_set_move_mode(impl, false);
+                return false;
+            }
+
+            {
+                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
+                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
+                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
+
+                impl->move_button.release_frames = 0;
+                impl->menu_button.release_frames = 0;
+                impl->camera_button.release_frames = 0;
+
+                if (move_hit) {
+                    impl->move_button.pressed = true;
+                    return true;
+                }
+                impl->move_button.pressed = false;
+
+                if (menu_hit) {
+                    impl->menu_button.pressed = true;
+                    fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
+                    return true;
+                }
+                impl->menu_button.pressed = false;
+
+                if (camera_hit) {
+                    impl->camera_button.pressed = true;
+                    fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
+                    return true;
+                }
+                impl->camera_button.pressed = false;
+                return false;
+            }
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            if (impl->in_move_mode) {
+                return false;
+            }
+
+            {
+                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->button.x, event->button.y);
+                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->button.x, event->button.y);
+                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->button.x, event->button.y);
+
+                if (impl->move_button.pressed || move_hit) {
+                    impl->move_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
+                    impl->move_button.pending_mode = !impl->in_move_mode;
+                    impl->move_button.pressed = false;
+                    return true;
+                }
+                impl->move_button.pressed = false;
+                impl->move_button.release_frames = 0;
+
+                if (impl->menu_button.pressed || menu_hit) {
+                    impl->menu_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
+                    impl->menu_button.pending_mode = false;
+                    impl->menu_button.pressed = false;
+                    fprintf(stderr, "widebrim: room menu button pressed; bag mode is not implemented yet\n");
+                    return true;
+                }
+                impl->menu_button.pressed = false;
+                impl->menu_button.release_frames = 0;
+                impl->menu_button.pending_mode = false;
+
+                if (impl->camera_button.pressed || camera_hit) {
+                    impl->camera_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
+                    impl->camera_button.pending_mode = false;
+                    impl->camera_button.pressed = false;
+                    fprintf(stderr, "widebrim: room camera button pressed; camera mode is not implemented yet\n");
+                    return true;
+                }
+                impl->camera_button.pressed = false;
+                impl->camera_button.release_frames = 0;
+                impl->camera_button.pending_mode = false;
+                return false;
+            }
+        default:
+            break;
     }
 
-    for (size_t i = 0; i < impl->place.exit_count; ++i) {
-        const mh_place_exit *exit = &impl->place.exits[i];
-        if (mode_room_point_in_rect(x, y, &exit->bounding)) {
-            if (mh_place_exit_can_spawn_event(exit)) {
-                fprintf(stderr,
-                        "widebrim: exit %zu triggers a scripted event (mode_decoding=%u); "
-                        "switching to DramaEvent\n",
-                        i, exit->mode_decoding);
-                game_state_set_event_id(impl->state, exit->spawn_data);
-                game_state_set_mode_next(impl->state, GAME_MODE_DRAMA_EVENT);
-                game_state_set_mode(impl->state, GAME_MODE_DRAMA_EVENT);
-                impl->done = true;
-                return true;
-            }
-            impl->pending_place_num = exit->spawn_data;
-            mode_room_set_move_mode(impl, false);
-            screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
-                                        mode_room_on_transition_fade_done, impl);
-            return true;
-        }
-    }
     return false;
 }
 
@@ -586,7 +561,7 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
                 mode_room_set_move_mode(impl, impl->move_button.pending_mode);
                 impl->move_button.pending_mode = false;
             }
-        } else if ((impl->move_button.pressed || impl->move_button.hovered) && impl->move_button.texture_on) {
+        } else if ((impl->move_button.pressed) && impl->move_button.texture_on) {
             move_texture = impl->move_button.texture_on;
         }
         if (impl->menu_button.release_frames > 0 && impl->menu_button.texture_click) {
@@ -595,7 +570,7 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
             if (impl->menu_button.release_frames == 0) {
                 impl->menu_button.pending_mode = false;
             }
-        } else if ((impl->menu_button.pressed || impl->menu_button.hovered) && impl->menu_button.texture_on) {
+        } else if ((impl->menu_button.pressed) && impl->menu_button.texture_on) {
             menu_texture = impl->menu_button.texture_on;
         }
         if (impl->camera_button.release_frames > 0 && impl->camera_button.texture_click) {
@@ -604,7 +579,7 @@ static void mode_room_draw(void *implp, SDL_Renderer *renderer) {
             if (impl->camera_button.release_frames == 0) {
                 impl->camera_button.pending_mode = false;
             }
-        } else if ((impl->camera_button.pressed || impl->camera_button.hovered) && impl->camera_button.texture_on) {
+        } else if ((impl->camera_button.pressed) && impl->camera_button.texture_on) {
             camera_texture = impl->camera_button.texture_on;
         }
 
@@ -705,21 +680,18 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->done = false;
     impl->in_move_mode = false;
     impl->move_button.pressed = false;
-    impl->move_button.hovered = false;
     impl->move_button.release_frames = 0;
     impl->move_button.pending_mode = false;
     impl->move_button.texture = NULL;
     impl->move_button.texture_on = NULL;
     impl->move_button.texture_click = NULL;
     impl->menu_button.pressed = false;
-    impl->menu_button.hovered = false;
     impl->menu_button.release_frames = 0;
     impl->menu_button.pending_mode = false;
     impl->menu_button.texture = NULL;
     impl->menu_button.texture_on = NULL;
     impl->menu_button.texture_click = NULL;
     impl->camera_button.pressed = false;
-    impl->camera_button.hovered = false;
     impl->camera_button.release_frames = 0;
     impl->camera_button.pending_mode = false;
     impl->camera_button.texture = NULL;
