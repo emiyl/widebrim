@@ -265,7 +265,7 @@ static void mode_room_set_move_mode(mode_room_impl *impl, bool enabled) {
 static bool mode_room_handle_key(void *implp, const wb_input_event *event) {
     mode_room_impl *impl = (mode_room_impl *)implp;
 
-    if (event && event->type == WIDEBRIM_INPUT_EVENT_KEY_DOWN && event->data.key.key == WIDEBRIM_KEY_M) {
+    if (event && event->type == WB_INPUT_EVENT_KEY_DOWN && event->data.key.key == WB_KEY_M) {
         mode_room_set_move_mode(impl, !impl->in_move_mode);
         return true;
     }

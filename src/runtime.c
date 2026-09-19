@@ -4,8 +4,8 @@
 
 #include "bg_layer.h"
 
-#define WIDEBRIM_TARGET_FRAMERATE 60.0
-#define WIDEBRIM_WINDOW_SCALE 2
+#define WB_TARGET_FRAMERATE 60.0
+#define WB_WINDOW_SCALE 2
 
 int wb_runtime_init(wb_runtime *rt, const char *datafiles_root, const char *language) {
     rt->window = NULL;
