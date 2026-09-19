@@ -108,12 +108,12 @@ void mode_spawner_init(mode_spawner *ms, game_state *state, renderer *renderer_i
 }
 
 void mode_spawner_destroy(mode_spawner *ms) {
+    bg_layer_destroy_state(&ms->bg);
     screen_collection_free(&ms->layers); /* destroys the active mode's impl, if any */
     if (ms->controller.renderer) {
         renderer_destroy(ms->controller.renderer);
         ms->controller.renderer = NULL;
     }
-    bg_layer_destroy_state(&ms->bg);
 }
 
 void mode_spawner_update(mode_spawner *ms, float dt_ms) {
