@@ -7,6 +7,7 @@ int game_state_init(game_state *gs, game_version version, const char *datafiles_
     mh_buffer font_data;
 
     memset(gs, 0, sizeof(*gs));
+    gs->version = version;
     if (mh_datafiles_init(&gs->datafiles, datafiles_root, language) != 0) {
         return -1;
     }
