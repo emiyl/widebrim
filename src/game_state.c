@@ -32,11 +32,37 @@ void game_state_destroy(game_state *gs) {
 
 void game_state_reset(game_state *gs) {
     memset(gs->room_hint_data, 0, sizeof(gs->room_hint_data));
+    gs->party_flags = 0u;
     gs->place_num = 1;
     gs->event_id = -1;
     gs->first_touch_enabled = true;
     gs->hint_coin_encountered = 0u;
     gs->hint_coin_available = 0u;
+}
+
+bool game_state_party_member_active(const game_state *gs, int member_index) {
+    if (!gs || member_index < 0 || member_index > 3) {
+        return false;
+    }
+    if (member_index < 2) {
+        return true;
+    }
+    return (gs->party_flags & (1u << (member_index - 2))) != 0u;
+}
+
+void game_state_party_member_set_active(game_state *gs, int member_index, bool active) {
+    uint8_t mask;
+
+    if (!gs || member_index < 2 || member_index > 3) {
+        return;
+    }
+
+    mask = (uint8_t)(1u << (member_index - 2));
+    if (active) {
+        gs->party_flags |= mask;
+    } else {
+        gs->party_flags &= (uint8_t)(~mask);
+    }
 }
 
 bool game_state_room_hint_coin_found(const game_state *gs, int room_num, int coin_index) {

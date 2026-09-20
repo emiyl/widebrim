@@ -72,6 +72,14 @@ typedef struct {
     renderer_texture *texture;
     int width;
     int height;
+    int x;
+    int y;
+} mode_room_party_member_state;
+
+typedef struct {
+    renderer_texture *texture;
+    int width;
+    int height;
 } mode_room_event_sprite_state;
 
 typedef struct {
@@ -105,6 +113,7 @@ typedef struct {
     mode_room_bg_anim_state bg_animations[MH_PLACE_BGANI_COUNT];
     size_t bg_animation_count;
     mode_room_exit_sprite_state exit_sprites[MODE_ROOM_EXIT_IMAGE_COUNT];
+    mode_room_party_member_state party_members[4];
     mode_room_event_sprite_state event_sprites[MH_PLACE_EVENT_COUNT];
     mode_room_hint_coin_effect_state hint_coin_effect;
     mode_room_title_state title;
@@ -765,6 +774,67 @@ static void mode_room_load_title_text(mode_room_impl *impl) {
     free(text_cstr);
 }
 
+static void mode_room_destroy_party_members(mode_room_impl *impl) {
+    size_t i;
+
+    for (i = 0; i < 4u; ++i) {
+        if (impl->party_members[i].texture) {
+            renderer_destroy_texture(impl->controller->renderer, impl->party_members[i].texture);
+            impl->party_members[i].texture = NULL;
+        }
+        impl->party_members[i].width = 0;
+        impl->party_members[i].height = 0;
+        impl->party_members[i].x = 0;
+        impl->party_members[i].y = 0;
+    }
+}
+
+static void mode_room_load_party_members(mode_room_impl *impl) {
+    static const int party_x_positions[4] = {5, 23, 41, 59};
+    static const char *party_names[4] = {"1", "2", "3", "4"};
+    mh_buffer data;
+    mh_anim_image anim;
+    size_t i;
+
+    mode_room_destroy_party_members(impl);
+    memset(&anim, 0, sizeof(anim));
+    mh_buffer_init(&data);
+    if (mh_datafiles_get_data(&impl->state->datafiles, "ani/map/map_icons.arc", &data) != 0) {
+        mh_buffer_free(&data);
+        return;
+    }
+    if (mh_anim_decode_arc(data.data, data.len, &anim) != 0) {
+        mh_buffer_free(&data);
+        return;
+    }
+    mh_buffer_free(&data);
+
+    for (i = 0; i < 4u; ++i) {
+        const mh_anim_frame *frame = NULL;
+
+        if (i >= 2u && !game_state_party_member_active(impl->state, (int)i - 2)) {
+            continue;
+        }
+        frame = mh_anim_get_frame_by_animation_name(&anim, party_names[i]);
+        if (!frame && anim.frame_count > 0u) {
+            frame = &anim.frames[0];
+        }
+        if (!frame) {
+            continue;
+        }
+        impl->party_members[i].texture = renderer_create_texture_from_rgba(impl->controller->renderer,
+                                                                           frame->pixels,
+                                                                           frame->width,
+                                                                           frame->height);
+        impl->party_members[i].width = frame->width;
+        impl->party_members[i].height = frame->height;
+        impl->party_members[i].x = party_x_positions[i];
+        impl->party_members[i].y = 144;
+    }
+
+    mh_anim_free(&anim);
+}
+
 static bool mode_room_load_current(mode_room_impl *impl) {
     char pack_path[64];
     char entry_name[64];
@@ -794,6 +864,7 @@ static bool mode_room_load_current(mode_room_impl *impl) {
     bg_loader_load(impl->state, impl->controller, bg_main_path, screen_controller_set_bg_main);
     bg_loader_load(impl->state, impl->controller, bg_map_path, screen_controller_set_bg_sub);
     mode_room_load_bg_animations(impl);
+    mode_room_load_party_members(impl);
     mode_room_load_event_sprites(impl);
     mode_room_load_hint_coin_effect(impl);
     mode_room_load_title_text(impl);
@@ -1070,6 +1141,20 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         camera_toggle_rect.h = (float)h;
     }
 
+    for (i = 0; i < 4u; ++i) {
+        const mode_room_party_member_state *member = &impl->party_members[i];
+        wb_rect rect;
+
+        if (!member->texture || member->width <= 0 || member->height <= 0) {
+            continue;
+        }
+        rect.x = (float)member->x;
+        rect.y = (float)member->y;
+        rect.w = (float)member->width;
+        rect.h = (float)member->height;
+        renderer_draw_texture(impl->controller->renderer, member->texture, &rect);
+    }
+
     for (i = 0; i < impl->bg_animation_count; ++i) {
         const mode_room_bg_anim_state *bg = &impl->bg_animations[i];
         size_t frame_index = mode_room_bg_animation_frame_index(bg, platform_time_get_ticks());
@@ -1273,6 +1358,7 @@ static void mode_room_destroy(void *implp) {
     int i;
 
     mode_room_destroy_bg_animations(impl);
+    mode_room_destroy_party_members(impl);
     mode_room_destroy_hint_coin_effect(impl);
     for (i = 0; i < MH_PLACE_EVENT_COUNT; ++i) {
         if (impl->event_sprites[i].texture) {
@@ -1352,6 +1438,7 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     impl->highlighted_exit_index = -1;
     impl->bg_animation_count = 0u;
     memset(impl->bg_animations, 0, sizeof(impl->bg_animations));
+    memset(impl->party_members, 0, sizeof(impl->party_members));
     memset(impl->event_sprites, 0, sizeof(impl->event_sprites));
     memset(&impl->hint_coin_effect, 0, sizeof(impl->hint_coin_effect));
     impl->title.texture = NULL;

@@ -17,6 +17,7 @@ typedef struct {
     int event_id;
     bool first_touch_enabled;
     uint8_t room_hint_data[64];
+    uint8_t party_flags;
     uint16_t hint_coin_encountered;
     uint16_t hint_coin_available;
     mh_font font_event;
@@ -38,6 +39,9 @@ int game_state_get_place_num(const game_state *gs);
 void game_state_set_place_num(game_state *gs, int place_num);
 int game_state_get_event_id(const game_state *gs);
 void game_state_set_event_id(game_state *gs, int event_id);
+
+bool game_state_party_member_active(const game_state *gs, int member_index);
+void game_state_party_member_set_active(game_state *gs, int member_index, bool active);
 
 bool game_state_room_hint_coin_found(const game_state *gs, int room_num, int coin_index);
 void game_state_room_hint_coin_set_found(game_state *gs, int room_num, int coin_index);
