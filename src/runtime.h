@@ -10,6 +10,7 @@
 #include "input.h"
 #include "mode_spawner.h"
 #include "window.h"
+#include "mode.h"
 
 typedef struct {
     window *window;
@@ -23,7 +24,7 @@ typedef struct {
     Uint32 engine_skip_clock_event_type;
 } wb_runtime;
 
-int wb_runtime_init(wb_runtime *rt, const char *datafiles_root, const char *language);
+int wb_runtime_init(wb_runtime *rt, game_version version, const char *datafiles_root, const char *language);
 void wb_runtime_destroy(wb_runtime *rt);
 void wb_runtime_run(wb_runtime *rt);
 

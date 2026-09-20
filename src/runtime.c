@@ -3,11 +3,12 @@
 #include <stdio.h>
 
 #include "bg_layer.h"
+#include "mode.h"
 
 #define WB_TARGET_FRAMERATE 60.0
 #define WB_WINDOW_SCALE 2
 
-int wb_runtime_init(wb_runtime *rt, const char *datafiles_root, const char *language) {
+int wb_runtime_init(wb_runtime *rt, game_version version, const char *datafiles_root, const char *language) {
     rt->window = NULL;
     rt->input = NULL;
     rt->running = false;
@@ -50,7 +51,7 @@ int wb_runtime_init(wb_runtime *rt, const char *datafiles_root, const char *lang
         return -1;
     }
 
-    if (game_state_init(&rt->state, datafiles_root, language) != 0) {
+    if (game_state_init(&rt->state, version, datafiles_root, language) != 0) {
         fprintf(stderr, "widebrim: failed to initialize Datafiles access at '%s'\n", datafiles_root);
         input_destroy(rt->input);
         rt->input = NULL;

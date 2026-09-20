@@ -6,6 +6,13 @@
 #include "screen.h"
 
 typedef enum {
+    WB_GAME_LAYTON1,
+    WB_GAME_LAYTON2,
+    WB_GAME_LAYTON3,
+    WB_GAME_LAYTON4,
+} game_version;
+
+typedef enum {
     GAME_MODE_RESET = 0,
     GAME_MODE_ROOM = 1,
     GAME_MODE_DRAMA_EVENT = 3,

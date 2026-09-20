@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-int game_state_init(game_state *gs, const char *datafiles_root, const char *language) {
+int game_state_init(game_state *gs, game_version version, const char *datafiles_root, const char *language) {
     mh_buffer font_data;
 
     memset(gs, 0, sizeof(*gs));

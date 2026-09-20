@@ -11,6 +11,7 @@
 
 typedef struct {
     mh_datafiles datafiles;
+    game_version version;
     game_mode current_mode;
     game_mode next_mode;
     int place_num;
@@ -24,7 +25,7 @@ typedef struct {
     bool font_event_loaded;
 } game_state;
 
-int game_state_init(game_state *gs, const char *datafiles_root, const char *language);
+int game_state_init(game_state *gs, game_version version, const char *datafiles_root, const char *language);
 void game_state_destroy(game_state *gs);
 
 void game_state_reset(game_state *gs);
