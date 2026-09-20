@@ -17,20 +17,18 @@
 #define MODE_ROOM_TITLE_CENTER_X 170
 #define MODE_ROOM_TITLE_Y 7
 
-#define SCREEN_W 256
-#define SCREEN_H 192
 #define SPACING 2
 
 #define MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES 6
 
 #define MODE_ROOM_MOVE_TOGGLE_FALLBACK_W 24
 #define MODE_ROOM_MOVE_TOGGLE_FALLBACK_H 30
-#define MODE_ROOM_MOVE_TOGGLE_X SCREEN_W - (MODE_ROOM_MOVE_TOGGLE_FALLBACK_W + SPACING * 2)
-#define MODE_ROOM_MOVE_TOGGLE_Y SCREEN_H - (MODE_ROOM_MOVE_TOGGLE_FALLBACK_H + SPACING * 2)
+#define MODE_ROOM_MOVE_TOGGLE_X WB_SCREEN_WIDTH - (MODE_ROOM_MOVE_TOGGLE_FALLBACK_W + SPACING * 2)
+#define MODE_ROOM_MOVE_TOGGLE_Y WB_SCREEN_HEIGHT - (MODE_ROOM_MOVE_TOGGLE_FALLBACK_H + SPACING * 2)
 
 #define MODE_ROOM_MENU_TOGGLE_FALLBACK_W 28
 #define MODE_ROOM_MENU_TOGGLE_FALLBACK_H 30
-#define MODE_ROOM_MENU_TOGGLE_X SCREEN_W - (MODE_ROOM_MENU_TOGGLE_FALLBACK_W + SPACING)
+#define MODE_ROOM_MENU_TOGGLE_X WB_SCREEN_WIDTH - (MODE_ROOM_MENU_TOGGLE_FALLBACK_W + SPACING)
 #define MODE_ROOM_MENU_TOGGLE_Y SPACING
 
 #define MODE_ROOM_CAMERA_TOGGLE_FALLBACK_W 24
@@ -392,8 +390,8 @@ static bool mode_room_toggle_rect_contains_point(mode_room_impl *impl, float x, 
     rect_x = MODE_ROOM_MOVE_TOGGLE_X;
     rect_y = MODE_ROOM_MOVE_TOGGLE_Y;
     if (w != MODE_ROOM_MOVE_TOGGLE_FALLBACK_W || h != MODE_ROOM_MOVE_TOGGLE_FALLBACK_H) {
-        rect_x = SCREEN_W - (w + SPACING * 2);
-        rect_y = SCREEN_H - (h + SPACING * 2);
+        rect_x = WB_SCREEN_WIDTH - (w + SPACING * 2);
+        rect_y = WB_SCREEN_HEIGHT - (h + SPACING * 2);
     }
     return mode_room_button_rect_contains_point((int)x, (int)room_y, rect_x, rect_y, w, h);
 }
@@ -410,7 +408,7 @@ static bool mode_room_menu_rect_contains_point(mode_room_impl *impl, float x, fl
     rect_x = MODE_ROOM_MENU_TOGGLE_X;
     rect_y = MODE_ROOM_MENU_TOGGLE_Y;
     if (w != MODE_ROOM_MENU_TOGGLE_FALLBACK_W || h != MODE_ROOM_MENU_TOGGLE_FALLBACK_H) {
-        rect_x = SCREEN_W - (w + SPACING);
+        rect_x = WB_SCREEN_WIDTH - (w + SPACING);
         rect_y = SPACING;
     }
     return mode_room_button_rect_contains_point((int)x, (int)room_y, rect_x, rect_y, w, h);
@@ -1036,8 +1034,8 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         int h;
         mode_room_get_button_size(impl->controller->renderer, impl->move_button.texture,
                                   MODE_ROOM_MOVE_TOGGLE_FALLBACK_W, MODE_ROOM_MOVE_TOGGLE_FALLBACK_H, &w, &h);
-        move_toggle_rect.x = (float)(SCREEN_W - (w + SPACING * 2));
-        move_toggle_rect.y = (float)(SCREEN_H - (h + SPACING * 2) + (int)WB_SCREEN_HEIGHT);
+        move_toggle_rect.x = (float)(WB_SCREEN_WIDTH - (w + SPACING * 2));
+        move_toggle_rect.y = (float)(WB_SCREEN_HEIGHT - (h + SPACING * 2) + (int)WB_SCREEN_HEIGHT);
         move_toggle_rect.w = (float)w;
         move_toggle_rect.h = (float)h;
     }
@@ -1046,7 +1044,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         int h;
         mode_room_get_button_size(impl->controller->renderer, impl->menu_button.texture,
                                   MODE_ROOM_MENU_TOGGLE_FALLBACK_W, MODE_ROOM_MENU_TOGGLE_FALLBACK_H, &w, &h);
-        menu_toggle_rect.x = (float)(SCREEN_W - (w + SPACING));
+        menu_toggle_rect.x = (float)(WB_SCREEN_WIDTH - (w + SPACING));
         menu_toggle_rect.y = (float)(SPACING + (int)WB_SCREEN_HEIGHT);
         menu_toggle_rect.w = (float)w;
         menu_toggle_rect.h = (float)h;
