@@ -732,8 +732,18 @@ static void mode_room_load_title_text(mode_room_impl *impl) {
 
     mh_buffer_init(&text_data);
     if (mh_datafiles_get_packed_data(&impl->state->datafiles, pack_path, entry_name, &text_data) != 0) {
+        static const char fallback_title[] = "[missing]";
+        size_t fallback_len = sizeof(fallback_title) - 1u;
+
         fprintf(stderr, "widebrim: failed to load title text '%s' from '%s'\n", entry_name, pack_path);
-        return;
+        text_data.data = (uint8_t *)malloc(fallback_len + 1u);
+        if (!text_data.data) {
+            mh_buffer_free(&text_data);
+            return;
+        }
+        memcpy(text_data.data, fallback_title, fallback_len);
+        text_data.data[fallback_len] = '\0';
+        text_data.len = fallback_len;
     }
 
     text_cstr = (char *)malloc(text_data.len + 1u);
