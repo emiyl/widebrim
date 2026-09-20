@@ -898,18 +898,23 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
             }
 
             {
-                bool move_hovered = mode_room_toggle_rect_contains_point(impl, event->data.mouse_motion.x,
-                                                                        event->data.mouse_motion.y);
-                bool menu_hovered = mode_room_menu_rect_contains_point(impl, event->data.mouse_motion.x,
-                                                                        event->data.mouse_motion.y);
-                bool camera_hovered = mode_room_camera_rect_contains_point(impl, event->data.mouse_motion.x,
+                bool move_hovered, menu_hovered, camera_hovered;
+                move_hovered = mode_room_toggle_rect_contains_point(impl, event->data.mouse_motion.x,
+                                                                    event->data.mouse_motion.y);
+                menu_hovered = mode_room_menu_rect_contains_point(impl, event->data.mouse_motion.x,
+                                                                    event->data.mouse_motion.y);
+                if (impl->state->version == WB_GAME_LAYTON2) {
+                    camera_hovered = mode_room_camera_rect_contains_point(impl, event->data.mouse_motion.x,
                                                                           event->data.mouse_motion.y);
+                } else {
+                    camera_hovered = false;
+                }
 
                 impl->move_button.hovered = move_hovered;
                 impl->menu_button.hovered = menu_hovered;
                 impl->camera_button.hovered = camera_hovered;
 
-                if (impl->move_button.pressed || impl->menu_button.pressed || impl->camera_button.pressed ||
+                if (impl->move_button.pressed || impl->menu_button.pressed || (impl->state->version == WB_GAME_LAYTON2 && impl->camera_button.pressed) ||
                     impl->move_button.release_frames > 0 || impl->menu_button.release_frames > 0 ||
                     impl->camera_button.release_frames > 0 || move_hovered || menu_hovered || camera_hovered) {
                     return true;
@@ -933,12 +938,17 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
             }
 
             {
-                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->data.mouse_button.x,
-                                                                   event->data.mouse_button.y);
-                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->data.mouse_button.x,
-                                                                      event->data.mouse_button.y);
-                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->data.mouse_button.x,
-                                                                    event->data.mouse_button.y);
+                bool menu_hit, camera_hit, move_hit;
+                menu_hit = mode_room_menu_rect_contains_point(impl, event->data.mouse_button.x,
+                                                              event->data.mouse_button.y);
+                move_hit = mode_room_toggle_rect_contains_point(impl, event->data.mouse_button.x,
+                                                               event->data.mouse_button.y);
+                if (impl->state->version == WB_GAME_LAYTON2) {
+                    camera_hit = mode_room_camera_rect_contains_point(impl, event->data.mouse_button.x,
+                                                                     event->data.mouse_button.y);
+                } else {
+                    camera_hit = false;
+                }
 
                 impl->move_button.release_frames = 0;
                 impl->menu_button.release_frames = 0;
@@ -1054,12 +1064,17 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
                     }
                 }
 
-                bool menu_hit = mode_room_menu_rect_contains_point(impl, event->data.mouse_button.x,
-                                                                   event->data.mouse_button.y);
-                bool camera_hit = mode_room_camera_rect_contains_point(impl, event->data.mouse_button.x,
-                                                                      event->data.mouse_button.y);
-                bool move_hit = mode_room_toggle_rect_contains_point(impl, event->data.mouse_button.x,
+                bool menu_hit, move_hit, camera_hit;
+                menu_hit = mode_room_menu_rect_contains_point(impl, event->data.mouse_button.x,
+                                                              event->data.mouse_button.y);
+                move_hit = mode_room_toggle_rect_contains_point(impl, event->data.mouse_button.x,
+                                                               event->data.mouse_button.y);
+                if (impl->state->version == WB_GAME_LAYTON2) {
+                    camera_hit = mode_room_camera_rect_contains_point(impl, event->data.mouse_button.x,
                                                                     event->data.mouse_button.y);
+                } else {
+                    camera_hit = false;
+                }
 
                 if (impl->move_button.pressed || move_hit) {
                     impl->move_button.release_frames = MODE_ROOM_BUTTON_RELEASE_COOLDOWN_FRAMES;
@@ -1130,7 +1145,7 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         menu_toggle_rect.w = (float)w;
         menu_toggle_rect.h = (float)h;
     }
-    {
+    if (impl->state->version != WB_GAME_LAYTON2) {
         int w;
         int h;
         mode_room_get_button_size(impl->controller->renderer, impl->camera_button.texture,
@@ -1139,6 +1154,11 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         camera_toggle_rect.y = (float)(SPACING + MODE_ROOM_MENU_TOGGLE_FALLBACK_H + SPACING + (int)WB_SCREEN_HEIGHT);
         camera_toggle_rect.w = (float)w;
         camera_toggle_rect.h = (float)h;
+    } else {
+        camera_toggle_rect.x = 0.0f;
+        camera_toggle_rect.y = 0.0f;
+        camera_toggle_rect.w = 0.0f;
+        camera_toggle_rect.h = 0.0f;
     }
 
     for (i = 0; i < 4u; ++i) {
@@ -1242,9 +1262,14 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
             }
         }
     } else {
-        renderer_texture *move_texture = impl->move_button.texture;
-        renderer_texture *menu_texture = impl->menu_button.texture;
-        renderer_texture *camera_texture = impl->camera_button.texture;
+        renderer_texture *move_texture, *menu_texture, *camera_texture;
+        move_texture = impl->move_button.texture;
+        menu_texture = impl->menu_button.texture;
+        if (impl->state->version == WB_GAME_LAYTON2) {
+            camera_texture = impl->camera_button.texture;
+        } else {
+            camera_texture = NULL;
+        }
 
         if (impl->move_button.release_frames > 0 && impl->move_button.texture_click) {
             move_texture = impl->move_button.texture_click;
@@ -1265,14 +1290,16 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
         } else if ((impl->menu_button.pressed) && impl->menu_button.texture_on) {
             menu_texture = impl->menu_button.texture_on;
         }
-        if (impl->camera_button.release_frames > 0 && impl->camera_button.texture_click) {
-            camera_texture = impl->camera_button.texture_click;
-            impl->camera_button.release_frames--;
-            if (impl->camera_button.release_frames == 0) {
-                impl->camera_button.pending_mode = false;
+        if (impl->state->version == WB_GAME_LAYTON2) {
+            if (impl->camera_button.release_frames > 0 && impl->camera_button.texture_click) {
+                camera_texture = impl->camera_button.texture_click;
+                impl->camera_button.release_frames--;
+                if (impl->camera_button.release_frames == 0) {
+                    impl->camera_button.pending_mode = false;
+                }
+            } else if ((impl->camera_button.pressed) && impl->camera_button.texture_on) {
+                camera_texture = impl->camera_button.texture_on;
             }
-        } else if ((impl->camera_button.pressed) && impl->camera_button.texture_on) {
-            camera_texture = impl->camera_button.texture_on;
         }
 
         if (move_texture) {
@@ -1287,13 +1314,14 @@ static void mode_room_draw(void *implp, renderer *renderer_instance) {
             renderer_fill_rect(impl->controller->renderer, &menu_toggle_rect, 90, 160, 255, 220);
             renderer_draw_rect(impl->controller->renderer, &menu_toggle_rect, 0, 0, 0, 255);
         }
-        if (camera_texture) {
-            renderer_draw_texture(impl->controller->renderer, camera_texture, &camera_toggle_rect);
-        } else {
-            renderer_fill_rect(impl->controller->renderer, &camera_toggle_rect, 255, 170, 60, 220);
-            renderer_draw_rect(impl->controller->renderer, &camera_toggle_rect, 0, 0, 0, 255);
+        if (impl->state->version == WB_GAME_LAYTON2) {
+            if (camera_texture) {
+                renderer_draw_texture(impl->controller->renderer, camera_texture, &camera_toggle_rect);
+            } else {
+                renderer_fill_rect(impl->controller->renderer, &camera_toggle_rect, 255, 170, 60, 220);
+                renderer_draw_rect(impl->controller->renderer, &camera_toggle_rect, 0, 0, 0, 255);
+            }
         }
-
     }
 
     if (impl->hint_coin_effect.active && impl->hint_coin_effect.frame_count > 0u) {
@@ -1448,24 +1476,45 @@ mode_handler mode_room_create(game_state *state, screen_controller *controller) 
     memset(impl->exit_sprites, 0, sizeof(impl->exit_sprites));
 
     mode_room_load_exit_sprites(impl);
+
+    char* move_mode_texture;
+    char* menu_icon_texture;
+    char* camera_icon_texture;
+
+    switch (impl->state->version) {
+        case WB_GAME_LAYTON1:
+            move_mode_texture = "ani/movemode.arc";
+            menu_icon_texture = "ani/menu_icon.arc";
+            break;
+        case WB_GAME_LAYTON2:
+            move_mode_texture = "ani/map/movemode.arc";
+            menu_icon_texture = "ani/map/menu_icon.arc";
+            camera_icon_texture = "ani/map/camera_icon.arc";
+            break;
+        default:
+            break;
+    }
+
     impl->move_button.texture = mode_room_load_button_texture(state, controller->renderer,
-                                                             "ani/map/movemode.arc", "off");
+                                                             move_mode_texture, "off");
     impl->move_button.texture_on = mode_room_load_button_texture(state, controller->renderer,
-                                                                "ani/map/movemode.arc", "on");
+                                                                move_mode_texture, "on");
     impl->move_button.texture_click = mode_room_load_button_texture(state, controller->renderer,
-                                                                    "ani/map/movemode.arc", "click");
+                                                                    move_mode_texture, "click");
     impl->menu_button.texture = mode_room_load_button_texture(state, controller->renderer,
-                                                             "ani/map/menu_icon.arc", "off");
+                                                             menu_icon_texture, "off");
     impl->menu_button.texture_on = mode_room_load_button_texture(state, controller->renderer,
-                                                                "ani/map/menu_icon.arc", "on");
+                                                                menu_icon_texture, "on");
     impl->menu_button.texture_click = mode_room_load_button_texture(state, controller->renderer,
-                                                                    "ani/map/menu_icon.arc", "click");
-    impl->camera_button.texture = mode_room_load_button_texture(state, controller->renderer,
-                                                              "ani/map/camera_icon.arc", "off");
-    impl->camera_button.texture_on = mode_room_load_button_texture(state, controller->renderer,
-                                                                 "ani/map/camera_icon.arc", "on");
-    impl->camera_button.texture_click = mode_room_load_button_texture(state, controller->renderer,
-                                                                     "ani/map/camera_icon.arc", "click");
+                                                                    menu_icon_texture, "click");
+    if (impl->state->version == WB_GAME_LAYTON2) {
+        impl->camera_button.texture = mode_room_load_button_texture(state, controller->renderer,
+                                                                  camera_icon_texture, "off");
+        impl->camera_button.texture_on = mode_room_load_button_texture(state, controller->renderer,
+                                                                     camera_icon_texture, "on");
+        impl->camera_button.texture_click = mode_room_load_button_texture(state, controller->renderer,
+                                                                         camera_icon_texture, "click");
+    }
     if (!mode_room_load_current(impl)) {
         fprintf(stderr, "widebrim: room mode failed to load place_num=%d\n", game_state_get_place_num(state));
     }
