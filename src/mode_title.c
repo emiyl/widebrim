@@ -51,8 +51,24 @@ mode_handler mode_title_create(game_state *state, screen_controller *controller)
     impl->state = state;
     impl->done = false;
 
-    bg_loader_load(state, controller, "bg/title/title.arc", screen_controller_set_bg_main);
-    bg_loader_load(state, controller, "bg/title/title_sub.arc", screen_controller_set_bg_sub);
+    char *bg_path, *sub_bg_path;
+    switch (state->version) {
+        case WB_GAME_LAYTON1:
+            bg_path = "bg/start_select2.arc";
+            sub_bg_path = "bg/select_title.arc";
+            break;
+        case WB_GAME_LAYTON2:
+            bg_path = "bg/title/title.arc";
+            sub_bg_path = "bg/title/title_sub.arc";
+            break;
+        default:
+            bg_path = "";
+            sub_bg_path = "";
+            break;
+    }
+
+    bg_loader_load(state, controller, bg_path, screen_controller_set_bg_main);
+    bg_loader_load(state, controller, sub_bg_path, screen_controller_set_bg_sub);
     screen_controller_fade_in(controller, FADER_DEFAULT_DURATION_MS, NULL, NULL);
 
     handler.layer.impl = impl;
