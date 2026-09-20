@@ -35,8 +35,8 @@ void game_state_reset(game_state *gs) {
     gs->place_num = 1;
     gs->event_id = -1;
     gs->first_touch_enabled = true;
-    gs->hint_coin_encountered = 10u;
-    gs->hint_coin_available = 10u;
+    gs->hint_coin_encountered = 0u;
+    gs->hint_coin_available = 0u;
 }
 
 bool game_state_room_hint_coin_found(const game_state *gs, int room_num, int coin_index) {
