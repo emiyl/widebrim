@@ -1,6 +1,7 @@
 #include "bg_loader.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <mh_datafiles.h>
 #include <mh_image.h>
@@ -16,6 +17,7 @@ bool bg_loader_load(game_state *state,
 
     mh_buffer_init(&data);
     if (mh_datafiles_get_data(&state->datafiles, rel_path, &data) != 0) {
+        fprintf(stderr, "widebrim: failed to load background data from %s\n", rel_path);
         return false;
     }
     if (mh_image_decode_static_arc(data.data, data.len, &rgba, &width, &height) == 0) {
