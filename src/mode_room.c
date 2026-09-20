@@ -734,11 +734,13 @@ static void mode_room_load_title_text(mode_room_impl *impl) {
 
     mh_buffer_init(&text_data);
     if (mh_datafiles_get_packed_data(&impl->state->datafiles, pack_path, entry_name, &text_data) != 0) {
+        fprintf(stderr, "widebrim: failed to load title text '%s' from '%s'\n", entry_name, pack_path);
         return;
     }
 
     text_cstr = (char *)malloc(text_data.len + 1u);
     if (!text_cstr) {
+        fprintf(stderr, "widebrim: failed to allocate memory for title text '%s'\n", entry_name);
         mh_buffer_free(&text_data);
         return;
     }
@@ -960,6 +962,19 @@ static bool mode_room_handle_touch(void *implp, const wb_input_event *event) {
             }
 
             {
+                x = (float)event->data.mouse_button.x;
+                y = (float)event->data.mouse_button.y - (float)WB_SCREEN_HEIGHT;
+                exit_index = mode_room_find_exit_index_at_point(impl, x, y);
+                if (exit_index >= 0) {
+                    const mh_place_exit *exit = &impl->place.exits[exit_index];
+                    if (exit->mode_decoding != 0u) {
+                        impl->pending_place_num = exit->spawn_data;
+                        screen_controller_fade_out(impl->controller, FADER_DEFAULT_DURATION_MS,
+                                                    mode_room_on_transition_fade_done, impl);
+                        return true;
+                    }
+                }
+
                 bool menu_hit = mode_room_menu_rect_contains_point(impl, event->data.mouse_button.x,
                                                                    event->data.mouse_button.y);
                 bool camera_hit = mode_room_camera_rect_contains_point(impl, event->data.mouse_button.x,
